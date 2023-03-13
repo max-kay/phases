@@ -1,4 +1,4 @@
-use my_ba::{Latice, TriAtoms};
+use phases::{Latice, TriAtoms};
 use std::fs::File;
 
 fn energies(atom_1: TriAtoms, atom_2: TriAtoms) -> f32 {
@@ -27,6 +27,8 @@ fn main() {
         .set_repeat(gif::Repeat::Finite(0))
         .expect("Error while setting repeats!");
 
+    let start = std::time::Instant::now();
+
     for i in 0..STEPS {
         grid.swap_rand();
         if i % (STEPS / FRAMES) == 0 {
@@ -37,4 +39,6 @@ fn main() {
                 .expect("Error while writing frame!");
         }
     }
+
+    println!("took {:?}", std::time::Instant::now() - start);
 }
