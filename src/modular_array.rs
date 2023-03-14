@@ -74,8 +74,10 @@ where
     }
 }
 
-impl<T: Default+ Copy, const WIDTH: usize, const HEIGHT: usize> Default for ModularArray<T, WIDTH, HEIGHT> 
-where [(); WIDTH*HEIGHT]:,
+impl<T: Default + Copy, const WIDTH: usize, const HEIGHT: usize> Default
+    for ModularArray<T, WIDTH, HEIGHT>
+where
+    [(); WIDTH * HEIGHT]:,
 {
     fn default() -> Self {
         Self::new()

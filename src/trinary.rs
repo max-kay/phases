@@ -1,9 +1,7 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{RandAtom, ModularArray};
-
-
+use crate::{ModularArray, RandAtom};
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(u8)]
@@ -18,11 +16,11 @@ impl RandAtom for TriAtoms {
     type Concentration = (f64, f64);
 
     fn uniform(rng: &mut Pcg64) -> Self {
-        match rng.gen_range(0..3){
+        match rng.gen_range(0..3) {
             0 => Self::A,
             1 => Self::B,
             2 => Self::C,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -36,7 +34,6 @@ impl RandAtom for TriAtoms {
         }
     }
 }
-
 
 impl<const WIDTH: usize, const HEIGHT: usize> From<&ModularArray<TriAtoms, WIDTH, HEIGHT>>
     for &[u8]
