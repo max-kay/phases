@@ -1,18 +1,9 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{ModularGrid, RandAtom};
+use crate::{ModularGrid, RandAtom, ModularArray};
 
-impl From<&ModularGrid<TriAtoms>> for &[u8] {
-    fn from(value: &ModularGrid<TriAtoms>) -> Self {
-        unsafe {
-            std::slice::from_raw_parts(
-                value.grid.as_ptr() as *const u8,
-                value.grid.len() * std::mem::size_of::<TriAtoms>(),
-            )
-        }
-    }
-}
+
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(u8)]
@@ -42,6 +33,33 @@ impl RandAtom for TriAtoms {
             Self::B
         } else {
             Self::C
+        }
+    }
+}
+
+impl From<&ModularGrid<TriAtoms>> for &[u8] {
+    fn from(value: &ModularGrid<TriAtoms>) -> Self {
+        unsafe {
+            std::slice::from_raw_parts(
+                value.grid.as_ptr() as *const u8,
+                value.grid.len() * std::mem::size_of::<TriAtoms>(),
+            )
+        }
+    }
+}
+
+
+impl<const WIDTH: usize, const HEIGHT: usize> From<&ModularArray<TriAtoms, WIDTH, HEIGHT>>
+    for &[u8]
+where
+    [(); WIDTH * HEIGHT]:,
+{
+    fn from(value: &ModularArray<TriAtoms, WIDTH, HEIGHT>) -> Self {
+        unsafe {
+            std::slice::from_raw_parts(
+                value.grid.as_ptr() as *const u8,
+                value.grid.len() * std::mem::size_of::<TriAtoms>(),
+            )
         }
     }
 }

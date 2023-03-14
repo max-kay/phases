@@ -1,18 +1,7 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{ModularGrid, RandAtom};
-
-impl From<&ModularGrid<BinAtoms>> for &[u8] {
-    fn from(value: &ModularGrid<BinAtoms>) -> Self {
-        unsafe {
-            std::slice::from_raw_parts(
-                value.grid.as_ptr() as *const u8,
-                value.grid.len() * std::mem::size_of::<BinAtoms>(),
-            )
-        }
-    }
-}
+use crate::{ModularArray, ModularGrid, RandAtom};
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(u8)]
@@ -38,6 +27,32 @@ impl RandAtom for BinAtoms {
             Self::A
         } else {
             Self::B
+        }
+    }
+}
+
+impl From<&ModularGrid<BinAtoms>> for &[u8] {
+    fn from(value: &ModularGrid<BinAtoms>) -> Self {
+        unsafe {
+            std::slice::from_raw_parts(
+                value.grid.as_ptr() as *const u8,
+                value.grid.len() * std::mem::size_of::<BinAtoms>(),
+            )
+        }
+    }
+}
+
+impl<const WIDTH: usize, const HEIGHT: usize> From<&ModularArray<BinAtoms, WIDTH, HEIGHT>>
+    for &[u8]
+where
+    [(); WIDTH * HEIGHT]:,
+{
+    fn from(value: &ModularArray<BinAtoms, WIDTH, HEIGHT>) -> Self {
+        unsafe {
+            std::slice::from_raw_parts(
+                value.grid.as_ptr() as *const u8,
+                value.grid.len() * std::mem::size_of::<BinAtoms>(),
+            )
         }
     }
 }

@@ -1,4 +1,6 @@
-use phases::{Latice, TriAtoms};
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
+use phases::{ArrayLatice, TriAtoms};
 use std::fs::File;
 
 fn energies(atom_1: TriAtoms, atom_2: TriAtoms) -> f32 {
@@ -18,11 +20,13 @@ const STEPS: usize = 1000000;
 const FRAMES: usize = 100;
 
 fn main() {
-    let mut grid = Latice::new(WIDTH, HEIGHT, energies, Some("my_seed"), Some((0.1, 0.5)));
+    let mut grid =
+        ArrayLatice::<_, WIDTH, HEIGHT>::new(energies, Some("my_seed"), Some((0.1, 0.5)));
 
     let file = File::create("./out/test.gif").expect("Error while creating file!");
     let palette: &[u8] = &[255, 127, 0, 0, 127, 255, 0, 255, 0];
-    let mut encoder = gif::Encoder::new(file, WIDTH as u16, HEIGHT as u16, palette).unwrap();
+    let mut encoder = gif::Encoder::new(file, WIDTH as u16, HEIGHT as u16, palette)
+        .expect("Error while creating gif encoder");
     encoder
         .set_repeat(gif::Repeat::Finite(0))
         .expect("Error while setting repeats!");
