@@ -1,7 +1,7 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{ModularArray, ModularGrid, RandAtom};
+use crate::{ModularArray, RandAtom};
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(u8)]
@@ -27,17 +27,6 @@ impl RandAtom for BinAtoms {
             Self::A
         } else {
             Self::B
-        }
-    }
-}
-
-impl From<&ModularGrid<BinAtoms>> for &[u8] {
-    fn from(value: &ModularGrid<BinAtoms>) -> Self {
-        unsafe {
-            std::slice::from_raw_parts(
-                value.grid.as_ptr() as *const u8,
-                value.grid.len() * std::mem::size_of::<BinAtoms>(),
-            )
         }
     }
 }

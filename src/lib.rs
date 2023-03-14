@@ -9,14 +9,11 @@ use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
 mod binary;
-mod const_latice;
+
 mod modular_array;
-mod modular_grid;
 mod trinary;
 
-pub use const_latice::ArrayLatice;
 pub use modular_array::ModularArray;
-pub use modular_grid::ModularGrid;
 
 pub use binary::BinAtoms;
 pub use trinary::TriAtoms;
@@ -28,22 +25,22 @@ pub trait RandAtom {
 }
 
 #[derive(Clone)]
-pub struct Latice<A> {
-    width: usize,
-    height: usize,
+pub struct ArrayLatice<A, const WIDTH: usize, const HEIGHT: usize>
+where
+    [(); WIDTH * HEIGHT]:,
+{
     energies: fn(A, A) -> f32,
-    pub grid: ModularGrid<A>,
+    pub grid: ModularArray<A, WIDTH, HEIGHT>,
     rng: Pcg64,
     tot_energy: Option<f32>,
 }
 
-impl<A> Latice<A>
+impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
 where
+    [(); WIDTH * HEIGHT]:,
     A: Copy + Default + RandAtom,
 {
     pub fn new(
-        width: usize,
-        height: usize,
         energies: fn(A, A) -> f32,
         seed: Option<&str>,
         concentration: Option<<A as RandAtom>::Concentration>,
@@ -53,18 +50,18 @@ where
             None => Pcg64::from_entropy(),
         };
 
-        let mut grid = ModularGrid::new(width, height);
+        let mut grid = ModularArray::new();
         match concentration {
             Some(concentration) => {
-                for x in 0..width {
-                    for y in 0..height {
+                for x in 0..WIDTH {
+                    for y in 0..HEIGHT {
                         grid[(x, y)] = <A as RandAtom>::with_concentration(&mut rng, concentration);
                     }
                 }
             }
             None => {
-                for x in 0..width {
-                    for y in 0..height {
+                for x in 0..WIDTH {
+                    for y in 0..HEIGHT {
                         grid[(x, y)] = <A as RandAtom>::uniform(&mut rng);
                     }
                 }
@@ -72,8 +69,6 @@ where
         }
 
         Self {
-            width,
-            height,
             energies,
             grid,
             rng,
@@ -86,8 +81,8 @@ where
             energy
         } else {
             let mut energy = 0.0;
-            for x in 0..(self.width as isize) {
-                for y in 0..(self.height as isize) {
+            for x in 0..(WIDTH as isize) {
+                for y in 0..(HEIGHT as isize) {
                     energy += (self.energies)(self.grid[(x, y)], self.grid[(x - 1, y)]);
                     energy += (self.energies)(self.grid[(x, y)], self.grid[(x, y - 1)]);
                 }
@@ -107,19 +102,20 @@ where
     }
 }
 
-impl<A> Latice<A>
+impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
 where
+    [(); WIDTH * HEIGHT]:,
     A: Copy + Default + RandAtom,
 {
     pub fn swap_rand(&mut self) {
         loop {
             let idx_1 = (
-                self.rng.gen_range(0..(self.width as isize)),
-                self.rng.gen_range(0..(self.height as isize)),
+                self.rng.gen_range(0..(WIDTH as isize)),
+                self.rng.gen_range(0..(HEIGHT as isize)),
             );
             let idx_2 = (
-                self.rng.gen_range(0..(self.width as isize)),
-                self.rng.gen_range(0..(self.height as isize)),
+                self.rng.gen_range(0..(WIDTH as isize)),
+                self.rng.gen_range(0..(HEIGHT as isize)),
             );
             let e_0 = self.energies_around(idx_1, self.grid[idx_1])
                 + self.energies_around(idx_2, self.grid[idx_2]);

@@ -1,7 +1,7 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{ModularGrid, RandAtom, ModularArray};
+use crate::{RandAtom, ModularArray};
 
 
 
@@ -33,17 +33,6 @@ impl RandAtom for TriAtoms {
             Self::B
         } else {
             Self::C
-        }
-    }
-}
-
-impl From<&ModularGrid<TriAtoms>> for &[u8] {
-    fn from(value: &ModularGrid<TriAtoms>) -> Self {
-        unsafe {
-            std::slice::from_raw_parts(
-                value.grid.as_ptr() as *const u8,
-                value.grid.len() * std::mem::size_of::<TriAtoms>(),
-            )
         }
     }
 }
