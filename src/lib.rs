@@ -8,16 +8,17 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
-mod binary;
-
 mod modular_array;
+
+mod binary;
 mod ternary;
 
 pub use modular_array::ModularArray;
 
-pub use binary::BinAtoms;
-pub use ternary::{TerAtoms, TerConcentrations};
+pub use binary::{BinAtoms, BinConcentration};
+pub use ternary::{TerAtoms, TerConcentration};
 
+/// This trait allows for atoms to be chosen uniformly or after a concentration.
 pub trait RandAtom {
     type Concentration: Copy;
     fn uniform(rng: &mut Pcg64) -> Self;
@@ -30,7 +31,7 @@ where
     [(); WIDTH * HEIGHT]:,
 {
     energies: fn(A, A) -> f32,
-    pub grid: ModularArray<A, WIDTH, HEIGHT>,
+    grid: ModularArray<A, WIDTH, HEIGHT>,
     rng: Pcg64,
     tot_energy: Option<f32>,
 }
@@ -255,5 +256,18 @@ where
                 return;
             }
         }
+    }
+}
+
+impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+where
+    [(); WIDTH * HEIGHT]:,
+    A: Copy + Default + RandAtom,
+{
+    pub fn as_bytes<'a>(&'a self) -> &'a [u8]
+    where
+        &'a ModularArray<A, WIDTH, HEIGHT>: Into<&'a [u8]>,
+    {
+        (&self.grid).into()
     }
 }

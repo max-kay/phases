@@ -1,6 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-use phases::{ArrayLatice, TerAtoms, TerConcentrations};
+use phases::{ArrayLatice, TerAtoms, TerConcentration};
 use std::{fs::File, path::Path};
 
 fn make_plot(ys: Vec<f32>, path: impl AsRef<Path>) {
@@ -48,8 +48,11 @@ const FRAMES: usize = 100;
 fn main() {
     let name = "mmdm";
 
-    let mut latice =
-        ArrayLatice::<_, WIDTH, HEIGHT>::new(energies, Some("my_seifed"), Some(TerConcentrations::new(0.6, 0.3, 0.1)));
+    let mut latice = ArrayLatice::<_, WIDTH, HEIGHT>::new(
+        energies,
+        Some("my_seed"),
+        Some(TerConcentration::new(0.6, 0.3, 0.1)),
+    );
 
     let file = File::create(format!("./out/{}.gif", name)).expect("Error while creating file!");
     let palette: &[u8] = &[255, 127, 0, 0, 127, 255, 0, 255, 0];
@@ -75,8 +78,12 @@ fn main() {
         energies.push(latice.tot_energy());
         if i % (STEPS / FRAMES) == 0 {
             temperature *= 0.99_f32.powi(10);
-            let frame: &[u8] = (&latice.grid).into();
-            let frame = gif::Frame::from_indexed_pixels(WIDTH as u16, HEIGHT as u16, frame, None);
+            let frame = gif::Frame::from_indexed_pixels(
+                WIDTH as u16,
+                HEIGHT as u16,
+                latice.as_bytes(),
+                None,
+            );
             encoder
                 .write_frame(&frame)
                 .expect("Error while writing frame!");
@@ -91,8 +98,7 @@ fn main() {
         .set_repeat(gif::Repeat::Infinite)
         .expect("Error while setting repeats!");
 
-    let frame: &[u8] = (&latice.grid).into();
-    let frame = gif::Frame::from_indexed_pixels(WIDTH as u16, HEIGHT as u16, frame, None);
+    let frame = gif::Frame::from_indexed_pixels(WIDTH as u16, HEIGHT as u16, latice.as_bytes(), None);
     encoder
         .write_frame(&frame)
         .expect("Error while writing frame!");

@@ -13,12 +13,12 @@ pub enum TerAtoms {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TerConcentrations {
+pub struct TerConcentration {
     c_a: f64,
     c_b_without_a: f64,
 }
 
-impl TerConcentrations {
+impl TerConcentration {
     pub fn new(x1: f64, x2: f64, x3: f64) -> Self {
         Self {
             c_a: x1 / (x1 + x2 + x3),
@@ -28,7 +28,7 @@ impl TerConcentrations {
 }
 
 impl RandAtom for TerAtoms {
-    type Concentration = TerConcentrations;
+    type Concentration = TerConcentration;
 
     fn uniform(rng: &mut Pcg64) -> Self {
         match rng.gen_range(0..3) {
