@@ -11,8 +11,21 @@ pub enum BinAtoms {
     B,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct BinConcentration {
+    c_a: f64,
+}
+
+impl BinConcentration {
+    pub fn new(x1: f64, x2: f64) -> Self {
+        Self {
+            c_a: x1 / (x1 + x2),
+        }
+    }
+}
+
 impl RandAtom for BinAtoms {
-    type Concentration = f64;
+    type Concentration = BinConcentration;
 
     fn uniform(rng: &mut Pcg64) -> Self {
         if rng.gen() {
@@ -22,8 +35,8 @@ impl RandAtom for BinAtoms {
         }
     }
 
-    fn with_concentration(rng: &mut Pcg64, c_a: Self::Concentration) -> Self {
-        if rng.gen_bool(c_a) {
+    fn with_concentration(rng: &mut Pcg64, c: Self::Concentration) -> Self {
+        if rng.gen_bool(c.c_a) {
             Self::A
         } else {
             Self::B

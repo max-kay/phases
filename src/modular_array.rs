@@ -1,5 +1,8 @@
 use std::ops::{Index, IndexMut};
 
+
+/// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
+/// and directly acceses the underlying array when using usize
 #[derive(Clone, Copy)]
 pub struct ModularArray<T, const WIDTH: usize, const HEIGHT: usize>
 where
@@ -37,6 +40,7 @@ where
         self.grid.index(y as usize * WIDTH + x as usize)
     }
 }
+
 impl<T, const WIDTH: usize, const HEIGHT: usize> IndexMut<(isize, isize)>
     for ModularArray<T, WIDTH, HEIGHT>
 where
