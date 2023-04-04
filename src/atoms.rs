@@ -46,7 +46,6 @@
 use std::ops::Deref;
 
 use crate::ModularArray;
-use crate::{Concentration, RandAtom};
 use rand::prelude::*;
 use rand::Rng;
 use rand_distr::WeightedIndex;
@@ -76,24 +75,22 @@ impl<const N: usize> Concrete<N> {
     }
 }
 
-impl<const N: usize> Concentration for Concrete<N> {
-    fn uniform() -> Self {
+impl<const N: usize>  Concrete<N> {
+    pub fn uniform() -> Self {
         Self::new([1.0; N])
     }
 
-    fn max_entropy(&self) -> f64 {
+    pub fn max_entropy(&self) -> f64 {
         -(self.cs.iter().fold(0.0, |acc, x| acc + x.ln() * x))
     }
 }
 
-impl<const N: usize> RandAtom for Atom<N> {
-    type C = Concrete<N>;
-
-    fn uniform(rng: &mut rand_pcg::Pcg64) -> Self {
-        Self(rng.gen_range(0..(N as u8)))
+impl<const N_ATOMS: usize>  Atom<N_ATOMS> {
+    pub fn uniform(rng: &mut rand_pcg::Pcg64) -> Self {
+        Self(rng.gen_range(0..(N_ATOMS as u8)))
     }
 
-    fn with_concentration(rng: &mut rand_pcg::Pcg64, c: Self::C) -> Self {
+    pub fn with_concentration(rng: &mut rand_pcg::Pcg64, c: Concrete<N_ATOMS>) -> Self {
         let distr = WeightedIndex::new(&c.cs).unwrap();
         Self(distr.sample(rng) as u8)
     }

@@ -6,58 +6,37 @@ use std::ops::IndexMut;
 use rand::distributions::Distribution;
 use rand::Rng;
 use rand::SeedableRng;
-use rand_distr::uniform;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
 mod modular_array;
-
-mod binary;
-mod ternary;
 
 mod atoms;
 pub use atoms::{Atom, Concrete};
 
 pub use modular_array::ModularArray;
 
-pub use binary::{BinAtoms, BinConcentration};
-pub use ternary::{TerAtoms, TerConcentration};
-
-/// This trait allows for atoms to be chosen uniformly or after a concentration.
-pub trait RandAtom: PartialEq + Eq + Copy {
-    type C: Copy + Concentration;
-    fn uniform(rng: &mut Pcg64) -> Self;
-    fn with_concentration(rng: &mut Pcg64, c: Self::C) -> Self;
-}
-
-pub trait Concentration {
-    fn uniform() -> Self;
-    fn max_entropy(&self) -> f64;
-}
-
-#[derive(Clone)]
-pub struct ArrayLatice<A, const WIDTH: usize, const HEIGHT: usize>
+pub struct ArrayLatice<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
 where
-    A: RandAtom,
     [(); WIDTH * HEIGHT]:,
 {
-    bond_energies: fn(A, A) -> f32,
-    concentration: <A as RandAtom>::C,
-    grid: ModularArray<A, WIDTH, HEIGHT>,
+    bond_energies: fn(Atom<N_ATOMS>, Atom<N_ATOMS>) -> f32,
+    concentration: Concrete<N_ATOMS>,
+    grid: ModularArray<Atom<N_ATOMS>, WIDTH, HEIGHT>,
     rng: Pcg64,
     internal_energy: Option<f32>,
 }
 
 /// all constructors
-impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
-    A: Copy + Default + RandAtom,
 {
     pub fn new(
-        bond_energies: fn(A, A) -> f32,
+        bond_energies: fn(Atom<N_ATOMS>, Atom<N_ATOMS>) -> f32,
         seed: Option<&str>,
-        concentration: Option<<A as RandAtom>::C>,
+        concentration: Option<Concrete<N_ATOMS>>,
     ) -> Self {
         let mut rng = match seed {
             Some(seed) => Seeder::from(seed).make_rng(),
@@ -69,7 +48,7 @@ where
             Some(concentration) => {
                 for x in 0..WIDTH {
                     for y in 0..HEIGHT {
-                        grid[(x, y)] = <A as RandAtom>::with_concentration(&mut rng, concentration);
+                        grid[(x, y)] = Atom::with_concentration(&mut rng, concentration);
                     }
                 }
                 concentration
@@ -77,10 +56,10 @@ where
             None => {
                 for x in 0..WIDTH {
                     for y in 0..HEIGHT {
-                        grid[(x, y)] = <A as RandAtom>::uniform(&mut rng);
+                        grid[(x, y)] = Atom::uniform(&mut rng);
                     }
                 }
-                <A as RandAtom>::C::uniform()
+                Concrete::uniform()
             }
         };
 
@@ -113,10 +92,10 @@ where
 }
 
 /// everything energies
-impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
-    A: Copy + Default + RandAtom,
 {
     /// This function returns the total energy of the system.
     /// This is fast when the energy is already calculated and recalculates it if it is not.
@@ -137,7 +116,7 @@ where
     }
 
     /// This function returns the local energy around the idx if it was swapped to atom_at_idx
-    fn energies_around(&self, idx: (isize, isize), atom_at_idx: A) -> f32 {
+    fn energies_around(&self, idx: (isize, isize), atom_at_idx: Atom<N_ATOMS>) -> f32 {
         (self.bond_energies)(atom_at_idx, self.grid[(idx.0 + 1, idx.1)])
             + (self.bond_energies)(atom_at_idx, self.grid[(idx.0 - 1, idx.1)])
             + (self.bond_energies)(atom_at_idx, self.grid[(idx.0, idx.1 + 1)])
@@ -166,10 +145,10 @@ where
 }
 
 /// Choosing and swaping indexes
-impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
-    A: Copy + Default + RandAtom,
 {
     /// This function chooses two locations in the grid uniformly.
     fn choose_idxs_uniformly(&mut self) -> ((isize, isize), (isize, isize)) {
@@ -210,12 +189,12 @@ where
 }
 
 /// all swapping processes
-impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
-    A: Default + RandAtom,
 {
-    // should I avoid swapping two atoms of the same type?
+    // should I avoid swapping two atoms of the same type? TODO
 
     /// This uniformly chooses two latice point and swaps the elements if the resulting energy is lower.
     /// If there is no swap it repeats this process until it succeds.
@@ -279,14 +258,14 @@ where
     }
 }
 
-impl<A, const WIDTH: usize, const HEIGHT: usize> ArrayLatice<A, WIDTH, HEIGHT>
+impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
-    A: Copy + Default + RandAtom,
 {
     pub fn as_bytes<'a>(&'a self) -> &'a [u8]
     where
-        &'a ModularArray<A, WIDTH, HEIGHT>: Into<&'a [u8]>,
+        &'a ModularArray<Atom<N_ATOMS>, WIDTH, HEIGHT>: Into<&'a [u8]>,
     {
         (&self.grid).into()
     }

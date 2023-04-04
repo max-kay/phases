@@ -1,7 +1,7 @@
 #![allow(incomplete_features, dead_code, unused_imports)]
 #![feature(generic_const_exprs)]
 use gif::{ExtensionData, Frame, Repeat};
-use phases::{ArrayLatice, BinAtoms, BinConcentration, TerAtoms, TerConcentration};
+use phases::ArrayLatice;
 use std::{fs::File, path::Path};
 
 fn make_plot(ys: Vec<f32>, path: impl AsRef<Path>) {
@@ -28,24 +28,6 @@ fn make_plot(ys: Vec<f32>, path: impl AsRef<Path>) {
             &BLACK,
         ))
         .unwrap();
-}
-
-fn energies_ter(atom_1: TerAtoms, atom_2: TerAtoms) -> f32 {
-    match (atom_1, atom_2) {
-        (TerAtoms::A, TerAtoms::A) => 0.0,
-        (TerAtoms::B, TerAtoms::B) => 0.0,
-        (TerAtoms::C, TerAtoms::C) => -3.0,
-        (TerAtoms::A, TerAtoms::B) | (TerAtoms::B, TerAtoms::A) => -2.0,
-        (TerAtoms::A, TerAtoms::C) | (TerAtoms::C, TerAtoms::A) => 1.0,
-        (TerAtoms::B, TerAtoms::C) | (TerAtoms::C, TerAtoms::B) => 1.0,
-    }
-}
-fn energies_bin(atom_1: BinAtoms, atom_2: BinAtoms) -> f32 {
-    match (atom_1, atom_2) {
-        (BinAtoms::A, BinAtoms::A) => 0.0,
-        (BinAtoms::B, BinAtoms::B) => 0.0,
-        (BinAtoms::A, BinAtoms::B) | (BinAtoms::B, BinAtoms::A) => -6.0,
-    }
 }
 
 // model parameters
@@ -82,21 +64,10 @@ fn main() {
     let name = "mmm";
 
     // binary
-    let mut latice = ArrayLatice::<_, WIDTH, HEIGHT>::new(
-        energies_bin,
-        Some("my_seed"),
-        // None,
-        Some(BinConcentration::new(1.0, 3.0)),
-    );
+    let mut latice = ArrayLatice::<N_ATOMS, WIDTH, HEIGHT>::new(energies, Some("my_seed"), None);
     let palette: &[u8] = &[25, 127, 0, 0, 200, 180];
 
     // // ternary
-    // let mut latice = ArrayLatice::<_, WIDTH, HEIGHT>::new(
-    //     energies_ter,
-    //     Some("my_seed"),
-    //     None,
-    //     // Some(TerConcentration::new(6.0, 3.0, 1.0)),
-    // );
     // let palette: &[u8] = &[255, 127, 0, 25, 127, 255, 0, 255, 60];
 
     let file = File::create(format!("./out/{}.gif", name)).expect("Error while creating file!");
