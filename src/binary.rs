@@ -1,9 +1,9 @@
 use rand::Rng;
 use rand_pcg::Pcg64;
 
-use crate::{ModularArray, RandAtom};
+use crate::{Concentration, ModularArray, RandAtom};
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[repr(u8)]
 pub enum BinAtoms {
     #[default]
@@ -14,18 +14,31 @@ pub enum BinAtoms {
 #[derive(Debug, Clone, Copy)]
 pub struct BinConcentration {
     c_a: f64,
+    c_b: f64,
 }
 
 impl BinConcentration {
-    pub fn new(x1: f64, x2: f64) -> Self {
+    pub fn new(n_a: f64, n_b: f64) -> Self {
+        let n_tot = n_a + n_b;
         Self {
-            c_a: x1 / (x1 + x2),
+            c_a: n_a / n_tot,
+            c_b: n_a / n_tot,
         }
     }
 }
 
+impl Concentration for BinConcentration {
+    fn uniform() -> Self {
+        Self::new(1.0, 1.0)
+    }
+
+    fn max_entropy(&self) -> f64 {
+        -(self.c_a.ln()*self.c_a + self.c_b.ln()*self.c_b)
+    }
+}
+
 impl RandAtom for BinAtoms {
-    type Concentration = BinConcentration;
+    type C = BinConcentration;
 
     fn uniform(rng: &mut Pcg64) -> Self {
         if rng.gen() {
@@ -35,7 +48,7 @@ impl RandAtom for BinAtoms {
         }
     }
 
-    fn with_concentration(rng: &mut Pcg64, c: Self::Concentration) -> Self {
+    fn with_concentration(rng: &mut Pcg64, c: Self::C) -> Self {
         if rng.gen_bool(c.c_a) {
             Self::A
         } else {
