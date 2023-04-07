@@ -11,32 +11,34 @@ use rand_seeder::Seeder;
 
 mod modular_array;
 
+pub mod anim;
+pub mod plots;
+
 mod atoms;
-pub use atoms::{Atom, Concrete};
+pub use atoms::{Atom, Concentration};
 
 pub use modular_array::ModularArray;
 
-pub struct ArrayLatice<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
+pub struct Lattice<const N: usize, const W: usize, const H: usize>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
-    bond_energies: fn(Atom<N_ATOMS>, Atom<N_ATOMS>) -> f32,
-    concentration: Concrete<N_ATOMS>,
-    grid: ModularArray<Atom<N_ATOMS>, WIDTH, HEIGHT>,
+    bond_energies: fn(Atom<N>, Atom<N>) -> f32,
+    concentration: Concentration<N>,
+    grid: ModularArray<Atom<N>, W, H>,
     rng: Pcg64,
     internal_energy: Option<f32>,
 }
 
 /// all constructors
-impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
-    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
     pub fn new(
-        bond_energies: fn(Atom<N_ATOMS>, Atom<N_ATOMS>) -> f32,
+        bond_energies: fn(Atom<N>, Atom<N>) -> f32,
         seed: Option<&str>,
-        concentration: Option<Concrete<N_ATOMS>>,
+        concentration: Option<Concentration<N>>,
     ) -> Self {
         let mut rng = match seed {
             Some(seed) => Seeder::from(seed).make_rng(),
@@ -46,56 +48,39 @@ where
         let mut grid = ModularArray::new();
         let concentration = match concentration {
             Some(concentration) => {
-                for x in 0..WIDTH {
-                    for y in 0..HEIGHT {
+                for x in 0..W {
+                    for y in 0..H {
                         grid[(x, y)] = Atom::with_concentration(&mut rng, concentration);
                     }
                 }
                 concentration
             }
             None => {
-                for x in 0..WIDTH {
-                    for y in 0..HEIGHT {
+                for x in 0..W {
+                    for y in 0..H {
                         grid[(x, y)] = Atom::uniform(&mut rng);
                     }
                 }
-                Concrete::uniform()
+                Concentration::uniform()
             }
         };
 
-        Self {
+        let mut obj = Self {
             bond_energies,
             grid,
             rng,
             concentration,
             internal_energy: None,
-        }
+        };
+        obj.internal_energy();
+        obj
     }
-
-    // pub fn new_from_grid(
-    //     grid: ModularArray<A, WIDTH, HEIGHT>,
-    //     energies: fn(A, A) -> f32,
-    //     seed: Option<&str>,
-    // ) -> Self {
-    //     let rng = if let Some(seed) = seed {
-    //         Seeder::from(seed).make_rng()
-    //     } else {
-    //         Pcg64::from_entropy()
-    //     };
-    //     Self {
-    //         energies,
-    //         grid,
-    //         rng,
-    //         tot_energy: None,
-    //     }
-    // }
 }
 
 /// everything energies
-impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
-    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
     /// This function returns the total energy of the system.
     /// This is fast when the energy is already calculated and recalculates it if it is not.
@@ -104,8 +89,8 @@ where
             energy
         } else {
             let mut energy = 0.0;
-            for x in 0..(WIDTH as isize) {
-                for y in 0..(HEIGHT as isize) {
+            for x in 0..(W as isize) {
+                for y in 0..(H as isize) {
                     energy += (self.bond_energies)(self.grid[(x, y)], self.grid[(x - 1, y)]);
                     energy += (self.bond_energies)(self.grid[(x, y)], self.grid[(x, y - 1)]);
                 }
@@ -116,7 +101,7 @@ where
     }
 
     /// This function returns the local energy around the idx if it was swapped to atom_at_idx
-    fn energies_around(&self, idx: (isize, isize), atom_at_idx: Atom<N_ATOMS>) -> f32 {
+    fn energies_around(&self, idx: (isize, isize), atom_at_idx: Atom<N>) -> f32 {
         (self.bond_energies)(atom_at_idx, self.grid[(idx.0 + 1, idx.1)])
             + (self.bond_energies)(atom_at_idx, self.grid[(idx.0 - 1, idx.1)])
             + (self.bond_energies)(atom_at_idx, self.grid[(idx.0, idx.1 + 1)])
@@ -138,27 +123,26 @@ where
         match self.internal_energy.as_mut() {
             Some(energy) => *energy += delta_e,
             None => {
-                self.internal_energy();
+                panic!();
             }
         }
     }
 }
 
 /// Choosing and swaping indexes
-impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
-    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
     /// This function chooses two locations in the grid uniformly.
     fn choose_idxs_uniformly(&mut self) -> ((isize, isize), (isize, isize)) {
         let idx_1 = (
-            self.rng.gen_range(0..(WIDTH as isize)),
-            self.rng.gen_range(0..(HEIGHT as isize)),
+            self.rng.gen_range(0..(W as isize)),
+            self.rng.gen_range(0..(H as isize)),
         );
         let idx_2 = (
-            self.rng.gen_range(0..(WIDTH as isize)),
-            self.rng.gen_range(0..(HEIGHT as isize)),
+            self.rng.gen_range(0..(W as isize)),
+            self.rng.gen_range(0..(H as isize)),
         );
         (idx_1, idx_2)
     }
@@ -170,8 +154,8 @@ where
         T: Distribution<isize> + Copy,
     {
         let idx_1 = (
-            self.rng.gen_range(0..(WIDTH as isize)),
-            self.rng.gen_range(0..(HEIGHT as isize)),
+            self.rng.gen_range(0..(W as isize)),
+            self.rng.gen_range(0..(H as isize)),
         );
         let dx = self.rng.sample(distr);
         let dy = self.rng.sample(distr);
@@ -189,83 +173,98 @@ where
 }
 
 /// all swapping processes
-impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
-    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
     // should I avoid swapping two atoms of the same type? TODO
 
-    /// This uniformly chooses two latice point and swaps the elements if the resulting energy is lower.
+    /// This uniformly chooses two lattice point and swaps the elements if the resulting energy is lower.
     /// If there is no swap it repeats this process until it succeds.
-    pub fn swap_uniform(&mut self) {
-        loop {
+    pub fn swap_uniform(&mut self) -> bool {
+        let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self.choose_idxs_uniformly();
-            let delta_e = self.calc_delta_e(idx_1, idx_2);
-            if delta_e <= 0.0 {
-                self.swap_idxs(delta_e, idx_1, idx_2);
-                return;
+            if self.grid[idx_1] != self.grid[idx_2] {
+                break (idx_1, idx_2);
             }
+        };
+        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        if delta_e <= 0.0 {
+            self.swap_idxs(delta_e, idx_1, idx_2);
+            true
+        } else {
+            false
         }
     }
 
-    /// This function chooses one latice point randomly and the second by pulling dy and dx from the distribution twice
+    /// This function chooses one lattice point randomly and the second by pulling dy and dx from the distribution twice
     /// and swap the atoms if the resulting energy is lower.
     /// If there is no swap it repeats this process until it succeds.
-    pub fn swap_distr<T>(&mut self, distr: T)
+    pub fn swap_distr<T>(&mut self, distr: T) -> bool
     where
         T: Distribution<isize> + Copy,
     {
-        loop {
+        let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self.choose_idxs_with_distribution(distr);
-            let delta_e = self.calc_delta_e(idx_1, idx_2);
-            if delta_e <= 0.0 {
-                self.swap_idxs(delta_e, idx_1, idx_2);
-                return;
+            if self.grid[idx_1] != self.grid[idx_2] {
+                break (idx_1, idx_2);
             }
+        };
+        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        if delta_e <= 0.0 {
+            self.swap_idxs(delta_e, idx_1, idx_2);
+            true
+        } else {
+            false
         }
     }
 
     /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
-    pub fn monte_carlo_swap(&mut self, beta: f32) {
-        loop {
+    pub fn monte_carlo_swap(&mut self, beta: f32) -> bool {
+        let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self.choose_idxs_uniformly();
-            // if self.grid[idx_1] == self.grid[idx_2] {
-            //     continue;
-            // }
-            let delta_e = self.calc_delta_e(idx_1, idx_2);
-            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
-                self.swap_idxs(delta_e, idx_1, idx_2);
-                return;
+            if self.grid[idx_1] != self.grid[idx_2] {
+                break (idx_1, idx_2);
             }
+        };
+        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
+            self.swap_idxs(delta_e, idx_1, idx_2);
+            true
+        } else {
+            false
         }
     }
 
     /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
-    /// using a distribution for the distance between the two latice sites
-    pub fn monte_carlo_swap_distr<T>(&mut self, distr: T, beta: f32)
+    /// using a distribution for the distance between the two lattice sites
+    pub fn monte_carlo_swap_distr<T>(&mut self, distr: T, beta: f32) -> bool
     where
         T: Distribution<isize> + Copy,
     {
-        loop {
+        let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self.choose_idxs_with_distribution(distr);
-            let delta_e = self.calc_delta_e(idx_1, idx_2);
-            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
-                self.swap_idxs(delta_e, idx_1, idx_2);
-                return;
+            if self.grid[idx_1] != self.grid[idx_2] {
+                break (idx_1, idx_2);
             }
+        };
+        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
+            self.swap_idxs(delta_e, idx_1, idx_2);
+            true
+        } else {
+            false
         }
     }
 }
 
-impl<const N_ATOMS: usize, const WIDTH: usize, const HEIGHT: usize>
-    ArrayLatice<N_ATOMS, WIDTH, HEIGHT>
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
 where
-    [(); WIDTH * HEIGHT]:,
+    [(); W * H]:,
 {
     pub fn as_bytes<'a>(&'a self) -> &'a [u8]
     where
-        &'a ModularArray<Atom<N_ATOMS>, WIDTH, HEIGHT>: Into<&'a [u8]>,
+        &'a ModularArray<Atom<N>, W, H>: Into<&'a [u8]>,
     {
         (&self.grid).into()
     }

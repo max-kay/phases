@@ -1,127 +1,131 @@
-#![allow(incomplete_features, dead_code, unused_imports)]
+#![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
-use gif::{ExtensionData, Frame, Repeat};
-use phases::ArrayLatice;
-use std::{fs::File, path::Path};
 
-fn make_plot(ys: Vec<f32>, path: impl AsRef<Path>) {
-    use plotters::prelude::*;
+use std::io::Write;
+use std::{fs::File, sync::atomic::AtomicU64};
 
-    let root = BitMapBackend::new(&path, (1280, 960)).into_drawing_area();
-    root.fill(&WHITE).unwrap();
-
-    let max = *ys.iter().max_by(|y_1, y_2| y_1.total_cmp(y_2)).unwrap();
-    let min = *ys.iter().min_by(|y_1, y_2| y_1.total_cmp(y_2)).unwrap();
-
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Energies", ("sans-serif", 30))
-        .set_label_area_size(LabelAreaPosition::Left, 50)
-        .set_label_area_size(LabelAreaPosition::Bottom, 50)
-        .build_cartesian_2d(0.0..(ys.len() as f32), min..max)
-        .unwrap();
-
-    chart.configure_mesh().draw().unwrap();
-
-    chart
-        .draw_series(LineSeries::new(
-            (0..ys.len()).zip(ys.iter()).map(|(x, y)| (x as f32, *y)),
-            &BLACK,
-        ))
-        .unwrap();
-}
+use chrono::Utc;
+use phases::Lattice;
+use rayon::prelude::*;
 
 // model parameters
-const N_ATOMS: usize = 2;
-type Atom = phases::Atom<N_ATOMS>;
-type Concentration = phases::Concrete<N_ATOMS>;
-const WIDTH: usize = 500;
-const HEIGHT: usize = 500;
-const STEPS: usize = WIDTH * HEIGHT * 1000;
+type Atom = phases::Atom<2>;
+type Concentration = phases::Concentration<2>;
+const WIDTH: usize = 128;
+const HEIGHT: usize = 128;
+const STEPS: usize = WIDTH * HEIGHT * 100;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 200;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
-        (0, 0) => 0.0,
-        (0, 1) | (1, 0) => 0.0,
-        (1, 1) => 0.0,
+        (0, 0) => -2.0,
+        (1, 1) => -1.0,
+        (0, 1) | (1, 0) => 3.0,
+        // (2, 2) => 0.0,
+        // (2, 0) | (0, 2) => 0.0,
+        // (2, 1) | (1, 2) => 0.0,
         _ => panic!(),
     }
 }
 
-// temperature
-const START: f32 = 0.002;
-const RISE: f32 = 0.0000002;
-fn beta(i: usize) -> f32 {
-    START * (RISE * i as f32).exp()
-}
+// temp
+const TEMP_STEPS: u32 = 30;
+const START_TEMP: f32 = 50.0;
 
-const FRAMES: usize = 100;
-const LENGTH: usize = 5000; // in ms
+// concentration
+const CONCENTRATION_STEPS: usize = 21;
+
+static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn main() {
-    println!("start setup");
     let start = std::time::Instant::now();
 
-    let name = "mmm";
+    let temps: Vec<f32> = (0..TEMP_STEPS)
+        .map(|i| START_TEMP / TEMP_STEPS as f32 * i as f32)
+        .rev()
+        .collect();
+    let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
+        .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.8 + 0.1)
+        .collect();
 
-    // binary
-    let mut latice = ArrayLatice::<N_ATOMS, WIDTH, HEIGHT>::new(energies, Some("my_seed"), None);
-    let palette: &[u8] = &[25, 127, 0, 0, 200, 180];
-
-    // // ternary
-    // let palette: &[u8] = &[255, 127, 0, 25, 127, 255, 0, 255, 60];
-
-    let file = File::create(format!("./out/{}.gif", name)).expect("Error while creating file!");
-    let mut encoder = gif::Encoder::new(file, WIDTH as u16, HEIGHT as u16, palette)
-        .expect("Error while creating gif encoder");
-    encoder
-        .set_repeat(Repeat::Infinite)
-        .expect("Error while setting repeats!");
-    encoder
-        .write_extension(ExtensionData::new_control_ext(
-            (LENGTH / FRAMES) as u16,
-            gif::DisposalMethod::Any,
-            true,
-            None,
-        ))
-        .expect("Error while writing ExtensionData!");
-    println!("took {:?}", std::time::Instant::now() - start);
-
-    let start = std::time::Instant::now();
-    let mut energies = Vec::with_capacity(STEPS);
-    for i in 0..STEPS {
-        latice.monte_carlo_swap(beta(i));
-        energies.push(latice.internal_energy());
-        if i % (STEPS / FRAMES) == 0 {
-            // println!("{} of {}", i / (STEPS / FRAMES) + 1, FRAMES);
-            encoder
-                .write_frame(&Frame::from_indexed_pixels(
-                    WIDTH as u16,
-                    HEIGHT as u16,
-                    latice.as_bytes(),
-                    None,
-                ))
-                .expect("Error while writing frame!");
+    let results: Vec<(Vec<f32>, Vec<f32>)> = concentrations
+        .par_iter()
+        .map(|c_a| run_model_at_concentration(Concentration::new([*c_a, 1.0 - c_a]), temps.clone()))
+        .collect();
+    let mut file = File::create(format!(
+        "logs/data_{}.csv",
+        Utc::now().format("%Y-%m-%d_%H-%M")
+    ))
+    .expect("error while creating file");
+    writeln!(
+        file,
+        "concentration a,temperature,internal energy U,heat capacity"
+    )
+    .unwrap();
+    for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
+        for ((t, int_energy), heat_capacity) in temps
+            .iter()
+            .zip(int_energies.iter())
+            .zip(heat_capacities.iter())
+        {
+            writeln!(file, "{:?},{:?},{:?},{:?}", c, t, int_energy, heat_capacity).unwrap();
         }
     }
 
-    let file =
-        File::create(format!("./out/{}_last_frame.gif", name)).expect("Error while creating file!");
-    let mut encoder = gif::Encoder::new(file, WIDTH as u16, HEIGHT as u16, palette)
-        .expect("Error while creating gif encoder");
-    encoder
-        .set_repeat(Repeat::Infinite)
-        .expect("Error while setting repeats!");
+    println!("took {:?}", start.elapsed());
+}
 
-    println!("took {:?}", std::time::Instant::now() - start);
+fn run_model_at_concentration(
+    concentration: Concentration,
+    temps: Vec<f32>,
+) -> (Vec<f32>, Vec<f32>) {
+    // let mut encoder = prepare_encoder(
+    //     format!("out/{:.0}.gif", concentration.get_cs()[0] * 100.0),
+    //     WIDTH as u16,
+    //     HEIGHT as u16,
+    //     Some((5000 / TEMP_STEPS) as u16),
+    // );
 
-    encoder
-        .write_frame(&Frame::from_indexed_pixels(
-            WIDTH as u16,
-            HEIGHT as u16,
-            latice.as_bytes(),
-            None,
-        ))
-        .expect("Error while writing frame!");
+    let mut avg_int_energies: Vec<f32> = Vec::new();
+    let mut heat_capacity: Vec<f32> = Vec::new();
+    let mut lattice = Lattice::<2, WIDTH, HEIGHT>::new(energies, Some("seed"), Some(concentration));
+    for temp in temps {
+        let beta = 1.0 / temp;
 
-    make_plot(energies, format!("out/{}.png", name));
+        for _ in 0..EQUILIBRIUM_STEPS {
+            lattice.monte_carlo_swap(beta);
+        }
+
+        let mut cumulative_int_energy = 0.0;
+        let mut cumulative_int_energy_squared = 0.0;
+
+        for _ in 0..STEPS {
+            lattice.monte_carlo_swap(beta);
+            let int_energy = lattice.internal_energy();
+            cumulative_int_energy += int_energy;
+            cumulative_int_energy_squared += int_energy * int_energy;
+        }
+
+        let avg_energy = cumulative_int_energy / STEPS as f32 / (WIDTH as f32 * HEIGHT as f32);
+        let avg_energy_sq = cumulative_int_energy_squared
+            / STEPS as f32
+            / (WIDTH as f32 * WIDTH as f32 * HEIGHT as f32 * HEIGHT as f32);
+        avg_int_energies.push(avg_energy);
+        heat_capacity.push(dbg!(avg_energy_sq - avg_energy * avg_energy) / temp.powi(2));
+        let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        println!(
+            "{} of {}",
+            progress,
+            TEMP_STEPS * CONCENTRATION_STEPS as u32
+        );
+        // encoder
+        //     .write_frame(&Frame::from_indexed_pixels(
+        //         WIDTH as u16,
+        //         HEIGHT as u16,
+        //         lattice.as_bytes(),
+        //         None,
+        //     ))
+        //     .unwrap();
+    }
+    (avg_int_energies, heat_capacity)
 }

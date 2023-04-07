@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.24"
 gif = "0.12.0"
 num-integer = "0.1.45"
 plotters = "0.3.4"
@@ -11,4 +12,6 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 rand_distr = { version = "0.4.3", features = ["alloc"]}
 rand_pcg = "0.3.1"
 rand_seeder = "0.2.3"
+rayon = "1.7.0"
+termion = "2.0.1"
 
