@@ -2,11 +2,13 @@
 #![feature(generic_const_exprs)]
 
 use std::io::Write;
+use std::process::Command;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
 use phases::Lattice;
-use rayon::prelude::*;
+use rand_distr::Distribution;
+use rayon::{prelude::*, vec};
 
 // model parameters
 type Atom = phases::Atom<2>;
@@ -14,11 +16,11 @@ type Concentration = phases::Concentration<2>;
 const WIDTH: usize = 128;
 const HEIGHT: usize = 128;
 const STEPS: usize = WIDTH * HEIGHT * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 200;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 50;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
-        (0, 0) => -2.0,
+        (0, 0) => -4.0,
         (1, 1) => -1.0,
         (0, 1) | (1, 0) => 3.0,
         // (2, 2) => 0.0,
@@ -29,7 +31,7 @@ fn energies(a1: Atom, a2: Atom) -> f32 {
 }
 
 // temp
-const TEMP_STEPS: u32 = 30;
+const TEMP_STEPS: u32 = 10;
 const START_TEMP: f32 = 50.0;
 
 // concentration
@@ -52,11 +54,9 @@ fn main() {
         .par_iter()
         .map(|c_a| run_model_at_concentration(Concentration::new([*c_a, 1.0 - c_a]), temps.clone()))
         .collect();
-    let mut file = File::create(format!(
-        "logs/data_{}.csv",
-        Utc::now().format("%Y-%m-%d_%H-%M")
-    ))
-    .expect("error while creating file");
+
+    let file_name = format!("logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
+    let mut file = File::create(&file_name).expect("error while creating file");
     writeln!(
         file,
         "concentration a,temperature,internal energy U,heat capacity"
@@ -73,6 +73,8 @@ fn main() {
     }
 
     println!("took {:?}", start.elapsed());
+
+    Command::new("./data.py").arg(&file_name).output().unwrap();
 }
 
 fn run_model_at_concentration(
@@ -88,30 +90,33 @@ fn run_model_at_concentration(
 
     let mut avg_int_energies: Vec<f32> = Vec::new();
     let mut heat_capacity: Vec<f32> = Vec::new();
-    let mut lattice = Lattice::<2, WIDTH, HEIGHT>::new(energies, Some("seed"), Some(concentration));
+    let mut lattice = Lattice::<2, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
         for _ in 0..EQUILIBRIUM_STEPS {
-            lattice.monte_carlo_swap(beta);
+            lattice.monte_carlo_swap_distr(MyDistr, beta);
         }
 
-        let mut cumulative_int_energy = 0.0;
-        let mut cumulative_int_energy_squared = 0.0;
-
+        let mut int_energies: Vec<f32> = Vec::with_capacity(STEPS);
         for _ in 0..STEPS {
-            lattice.monte_carlo_swap(beta);
-            let int_energy = lattice.internal_energy();
-            cumulative_int_energy += int_energy;
-            cumulative_int_energy_squared += int_energy * int_energy;
+            lattice.monte_carlo_swap_distr(MyDistr, beta);
+            int_energies.push(lattice.internal_energy())
         }
 
-        let avg_energy = cumulative_int_energy / STEPS as f32 / (WIDTH as f32 * HEIGHT as f32);
-        let avg_energy_sq = cumulative_int_energy_squared
-            / STEPS as f32
-            / (WIDTH as f32 * WIDTH as f32 * HEIGHT as f32 * HEIGHT as f32);
+        // this seems like a bad way to caluculate the stats but no idea what went wrong when I did it efficiently
+        // TODO
+        let avg_energy: f32 =
+            int_energies.iter().sum::<f32>() / int_energies.len() as f32;
+        let variance = int_energies
+            .iter()
+            .map(|e| (*e - avg_energy).powi(2))
+            .sum::<f32>()
+            / int_energies.len() as f32;
+        let avg_energy = avg_energy / (WIDTH * HEIGHT) as f32;
+        let variance = variance / (WIDTH * HEIGHT) as f32 / (WIDTH * HEIGHT) as f32;
         avg_int_energies.push(avg_energy);
-        heat_capacity.push(dbg!(avg_energy_sq - avg_energy * avg_energy) / temp.powi(2));
+        heat_capacity.push(variance / temp.powi(2));
         let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         println!(
             "{} of {}",
@@ -128,4 +133,17 @@ fn run_model_at_concentration(
         //     .unwrap();
     }
     (avg_int_energies, heat_capacity)
+}
+
+#[derive(Copy, Clone)]
+pub struct MyDistr;
+
+impl Distribution<isize> for MyDistr {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> isize {
+        if rng.gen() {
+            1
+        } else {
+            -1
+        }
+    }
 }

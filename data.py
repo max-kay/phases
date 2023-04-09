@@ -1,20 +1,28 @@
+#!/opt/homebrew/Caskroom/miniconda/base/envs/datasc
+
+from sys import argv;
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
 
-# df = pd.read_csv("logs/data_2023-04-06_15-52.csv")
-# df = pd.read_csv("logs/data_2023-04-06_20-18.csv")
-# df = pd.read_csv("logs/data_2023-04-06_22-57.csv") ##
-# df = pd.read_csv("logs/data_2023-04-06_22-59.csv")
-# df = pd.read_csv("logs/data_2023-04-06_23-01.csv")
-# df = pd.read_csv("logs/data_2023-04-07_00-13.csv")
-# df = pd.read_csv("logs/data_2023-04-07_01-36.csv")
-# df = pd.read_csv("logs/data_2023-04-07_09-08.csv")
-# temperature was chosen in the wrong direction until here
-# df = pd.read_csv("logs/data_2023-04-07_09-53.csv")
-# df = pd.read_csv("logs/data_2023-04-07_10-04.csv")
-df = pd.read_csv("logs/data_2023-04-07_12-36.csv")
+
+if len(argv) == 2:
+    df = pd.read_csv(argv[1])
+else:
+    # df = pd.read_csv("logs/data_2023-04-06_15-52.csv")
+    # df = pd.read_csv("logs/data_2023-04-06_20-18.csv")
+    # df = pd.read_csv("logs/data_2023-04-06_22-57.csv") ##
+    # df = pd.read_csv("logs/data_2023-04-06_22-59.csv")
+    # df = pd.read_csv("logs/data_2023-04-06_23-01.csv")
+    # df = pd.read_csv("logs/data_2023-04-07_00-13.csv")
+    # df = pd.read_csv("logs/data_2023-04-07_01-36.csv")
+    # df = pd.read_csv("logs/data_2023-04-07_09-08.csv")
+    # temperature was chosen in the wrong direction until here
+    # df = pd.read_csv("logs/data_2023-04-07_09-53.csv")
+    # df = pd.read_csv("logs/data_2023-04-07_10-04.csv")
+    df = pd.read_csv("logs/data_2023-04-07_13-10.csv")
+
 
 
 n_concentrations = len(df["concentration a"].unique())
