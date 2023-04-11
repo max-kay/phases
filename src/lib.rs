@@ -101,21 +101,21 @@ where
     }
 
     /// This function returns the local energy around the idx if it was swapped to atom_at_idx
-    fn energies_around(&self, idx: (isize, isize), atom_at_idx: Atom<N>) -> f32 {
-        (self.bond_energies)(atom_at_idx, self.grid[(idx.0 + 1, idx.1)])
-            + (self.bond_energies)(atom_at_idx, self.grid[(idx.0 - 1, idx.1)])
-            + (self.bond_energies)(atom_at_idx, self.grid[(idx.0, idx.1 + 1)])
-            + (self.bond_energies)(atom_at_idx, self.grid[(idx.0, idx.1 - 1)])
+    fn energies_around(&self, idx: (isize, isize)) -> f32 {
+        (self.bond_energies)(self.grid[idx], self.grid[(idx.0 + 1, idx.1)])
+            + (self.bond_energies)(self.grid[idx], self.grid[(idx.0 - 1, idx.1)])
+            + (self.bond_energies)(self.grid[idx], self.grid[(idx.0, idx.1 + 1)])
+            + (self.bond_energies)(self.grid[idx], self.grid[(idx.0, idx.1 - 1)])
     }
 
-    /// This function calculates the energy difference when swapping the indexes
-    fn calc_delta_e(&mut self, idx_1: (isize, isize), idx_2: (isize, isize)) -> f32 {
-        let e_0 = self.energies_around(idx_1, self.grid[idx_1])
-            + self.energies_around(idx_2, self.grid[idx_2]);
-        let e_1 = self.energies_around(idx_1, self.grid[idx_2])
-            + self.energies_around(idx_2, self.grid[idx_1]);
-        e_1 - e_0
-    }
+    // /// This function calculates the energy difference when swapping the indexes
+    // fn calc_delta_e(&mut self, idx_1: (isize, isize), idx_2: (isize, isize)) -> f32 {
+    //     let e_0 = self.energies_around(idx_1, self.grid[idx_1])
+    //         + self.energies_around(idx_2, self.grid[idx_2]);
+    //     let e_1 = self.energies_around(idx_1, self.grid[idx_2])
+    //         + self.energies_around(idx_2, self.grid[idx_1]);
+    //     e_1 - e_0
+    // }
 
     /// This function updates the energy if already calculated and recalculates the whole energy
     /// if it is not already calculated.
@@ -163,12 +163,20 @@ where
         (idx_1, idx_2)
     }
 
-    /// this function swaps the indexes and updates the energies with the provided value
-    fn swap_idxs(&mut self, delta_e: f32, idx_1: (isize, isize), idx_2: (isize, isize)) {
-        self.update_energy(delta_e);
+    /// this function swaps the indexes
+    fn swap_idxs(&mut self, idx_1: (isize, isize), idx_2: (isize, isize)) {
         let temp = *self.grid.index_mut(idx_1);
         *self.grid.index_mut(idx_1) = *self.grid.index(idx_2);
         *self.grid.index_mut(idx_2) = temp;
+    }
+}
+
+impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
+where
+    [(); W * H]:,
+{
+    pub fn get_cs(&self) -> Concentration<N> {
+        self.concentration
     }
 }
 
@@ -188,11 +196,15 @@ where
                 break (idx_1, idx_2);
             }
         };
-        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        self.swap_idxs(idx_1, idx_2);
+        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        let delta_e = e_1 - e_0;
         if delta_e <= 0.0 {
-            self.swap_idxs(delta_e, idx_1, idx_2);
+            self.update_energy(delta_e);
             true
         } else {
+            self.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -210,11 +222,15 @@ where
                 break (idx_1, idx_2);
             }
         };
-        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        self.swap_idxs(idx_1, idx_2);
+        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        let delta_e = e_1 - e_0;
         if delta_e <= 0.0 {
-            self.swap_idxs(delta_e, idx_1, idx_2);
+            self.update_energy(delta_e);
             true
         } else {
+            self.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -227,11 +243,15 @@ where
                 break (idx_1, idx_2);
             }
         };
-        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        self.swap_idxs(idx_1, idx_2);
+        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        let delta_e = e_1 - e_0;
         if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
-            self.swap_idxs(delta_e, idx_1, idx_2);
+            self.update_energy(delta_e);
             true
         } else {
+            self.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -248,11 +268,15 @@ where
                 break (idx_1, idx_2);
             }
         };
-        let delta_e = self.calc_delta_e(idx_1, idx_2);
+        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        self.swap_idxs(idx_1, idx_2);
+        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
+        let delta_e = e_1 - e_0;
         if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
-            self.swap_idxs(delta_e, idx_1, idx_2);
+            self.update_energy(delta_e);
             true
         } else {
+            self.swap_idxs(idx_1, idx_2);
             false
         }
     }

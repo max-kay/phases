@@ -10,8 +10,8 @@ use rand_distr::Distribution;
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::Atom<3>;
-type Concentration = phases::Concentration<3>;
+type Atom = phases::Atom<2>;
+type Concentration = phases::Concentration<2>;
 const WIDTH: usize = 256;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 200;
@@ -19,69 +19,61 @@ const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 300;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
-        (0, 0) => -1.0,
+        (0, 0) => -4.0,
         (1, 1) => -1.0,
         (0, 1) | (1, 0) => 3.0,
-        (2, 2) => 0.0,
-        (2, 0) | (0, 2) => -2.0,
-        (2, 1) | (1, 2) => 0.5,
-        _ => unreachable!(),
+        // (2, 2) => 0.0,
+        // (2, 0) | (0, 2) => 0.0,
+        // (2, 1) | (1, 2) => 0.0,
+        _ => panic!(),
     }
 }
 
 // temp
-const TEMP_STEPS: u32 = 12;
-const START_TEMP: f32 = 50.0;
+const TEMP_STEPS: u32 = 20;
+const START_TEMP: f32 = 100.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 14;
+const CONCENTRATION_STEPS: usize = 21;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn main() {
     let start = std::time::Instant::now();
-    for c_c in 0..3 {
-        let temps: Vec<f32> = (0..TEMP_STEPS)
-            .map(|i| START_TEMP / TEMP_STEPS as f32 * i as f32)
-            .rev()
-            .collect();
-        let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
-            .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.8 + 0.1)
-            .collect();
 
-        let results: Vec<(Vec<f32>, Vec<f32>)> = concentrations
-            .par_iter()
-            .map(|c_a| {
-                run_model_at_concentration(
-                    Concentration::new([*c_a, 1.0 - c_a, c_c as f64]),
-                    temps.clone(),
-                )
-            })
-            .collect();
+    let temps: Vec<f32> = (0..TEMP_STEPS)
+        .map(|i| START_TEMP / TEMP_STEPS as f32 * i as f32)
+        .rev()
+        .collect();
+    let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
+        .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.8 + 0.1)
+        .collect();
 
-        let file_name = format!(
-            "logs/data_{}_{}.csv",
-            Utc::now().format("%Y-%m-%d_%H-%M"),
-            c_c
-        );
-        let mut file = File::create(&file_name).expect("error while creating file");
-        writeln!(
-            file,
-            "concentration a,temperature,internal energy U,heat capacity"
-        )
-        .unwrap();
-        for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
-            for ((t, int_energy), heat_capacity) in temps
-                .iter()
-                .zip(int_energies.iter())
-                .zip(heat_capacities.iter())
-            {
-                writeln!(file, "{:?},{:?},{:?},{:?}", c, t, int_energy, heat_capacity).unwrap();
-            }
+    let results: Vec<(Vec<f32>, Vec<f32>)> = concentrations
+        .par_iter()
+        .map(|c_a| run_model_at_concentration(Concentration::new([*c_a, 1.0 - c_a]), temps.clone()))
+        .collect();
+
+    let file_name = format!("logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
+    let mut file = File::create(&file_name).expect("error while creating file");
+    writeln!(
+        file,
+        "concentration a,temperature,internal energy U,heat capacity"
+    )
+    .unwrap();
+    for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
+        for ((t, int_energy), heat_capacity) in temps
+            .iter()
+            .zip(int_energies.iter())
+            .zip(heat_capacities.iter())
+        {
+            writeln!(file, "{:?},{:?},{:?},{:?}", c, t, int_energy, heat_capacity).unwrap();
         }
     }
 
     println!("took {:?}", start.elapsed());
+
+    // Command::new("./data.py").arg(&file_name).output().unwrap();
 }
 
 fn run_model_at_concentration(
@@ -97,7 +89,7 @@ fn run_model_at_concentration(
 
     let mut avg_int_energies: Vec<f32> = Vec::new();
     let mut heat_capacity: Vec<f32> = Vec::new();
-    let mut lattice = Lattice::<3, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
+    let mut lattice = Lattice::<2, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
@@ -126,7 +118,7 @@ fn run_model_at_concentration(
         println!(
             "{} of {}",
             progress,
-            TEMP_STEPS * CONCENTRATION_STEPS as u32 * 3
+            TEMP_STEPS * CONCENTRATION_STEPS as u32
         );
         // encoder
         //     .write_frame(&Frame::from_indexed_pixels(

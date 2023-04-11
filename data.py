@@ -1,6 +1,6 @@
 #!/opt/homebrew/Caskroom/miniconda/base/envs/datasc
-
-from sys import argv;
+import numpy as np
+from sys import argv
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -21,8 +21,8 @@ else:
     # temperature was chosen in the wrong direction until here
     # df = pd.read_csv("logs/data_2023-04-07_09-53.csv")
     # df = pd.read_csv("logs/data_2023-04-07_10-04.csv")
-    df = pd.read_csv("logs/data_2023-04-07_13-10.csv")
-
+    # df = pd.read_csv("logs/data_2023-04-07_13-10.csv")
+    df = pd.read_csv("logs/data_2023-04-09_12-00.csv")
 
 
 n_concentrations = len(df["concentration a"].unique())
@@ -49,7 +49,7 @@ ax2 = fig.add_subplot(122, projection="3d")
 ax2.plot_surface(
     df["concentration a"].values.reshape((n_concentrations, -1)),
     df["temperature"].values.reshape((n_concentrations, -1)),
-    df["heat capacity"].values.reshape((n_concentrations, -1)),
+    np.log(df["heat capacity"].values.reshape((n_concentrations, -1))),
     cmap=cm.coolwarm,
     linewidth=0,
     antialiased=False,
@@ -57,7 +57,7 @@ ax2.plot_surface(
 
 ax2.set_xlabel("$X_a$")
 ax2.set_ylabel("T")
-ax2.set_zlabel("C")
+ax2.set_zlabel("log of C")
 ax2.set_title("heat capacity")
 
 plt.show()

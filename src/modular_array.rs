@@ -1,6 +1,5 @@
 use std::ops::{Index, IndexMut};
 
-
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
 #[derive(Clone, Copy)]
@@ -26,8 +25,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> Index<(isize, isize)>
-    for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> Index<(isize, isize)> for ModularArray<T, W, H>
 where
     [(); W * H]:,
 {
@@ -41,8 +39,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)>
-    for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for ModularArray<T, W, H>
 where
     [(); W * H]:,
 {
@@ -54,8 +51,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> Index<(usize, usize)>
-    for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> Index<(usize, usize)> for ModularArray<T, W, H>
 where
     [(); W * H]:,
 {
@@ -67,8 +63,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> IndexMut<(usize, usize)>
-    for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> IndexMut<(usize, usize)> for ModularArray<T, W, H>
 where
     [(); W * H]:,
 {
@@ -78,8 +73,7 @@ where
     }
 }
 
-impl<T: Default + Copy, const W: usize, const H: usize> Default
-    for ModularArray<T, W, H>
+impl<T: Default + Copy, const W: usize, const H: usize> Default for ModularArray<T, W, H>
 where
     [(); W * H]:,
 {

@@ -55,8 +55,7 @@ impl<const N: usize> Atom<N> {
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize>
-    From<&ModularArray<Atom<N>, W, H>> for &[u8]
+impl<const W: usize, const H: usize, const N: usize> From<&ModularArray<Atom<N>, W, H>> for &[u8]
 where
     [(); W * H]:,
 {

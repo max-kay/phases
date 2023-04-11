@@ -1,38 +1,35 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 use gif::Frame;
-use phases::{
-    anim::prepare_encoder,
-    plots::{float_plot},
-    Lattice,
-};
+use phases::{anim::prepare_encoder, plots::float_plot, Lattice};
+use rand_distr::Distribution;
 
 // model parameters
-const N_ATOMS: usize = 2;
+const N_ATOMS: usize = 3;
 type Atom = phases::Atom<N_ATOMS>;
 type Concentration = phases::Concentration<N_ATOMS>;
 const WIDTH: usize = 400;
 const HEIGHT: usize = 400;
-const STEPS: usize = WIDTH * HEIGHT * 400;
+const STEPS: usize = WIDTH * HEIGHT * 4000;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
         (0, 0) => -1.0,
         (1, 1) => -1.0,
         (0, 1) | (1, 0) => 3.0,
-        // (2, 2) => 0.0,
-        // (2, 0) | (0, 2) => 0.0,
-        // (2, 1) | (1, 2) => 0.0,
-        _ => panic!(),
+        (2, 2) => 0.0,
+        (2, 0) | (0, 2) => -2.0,
+        (2, 1) | (1, 2) => 0.5,
+        _ => unreachable!(),
     }
 }
 
 // temperature
-const START: f32 = 0.002;
-const RISE: f32 = 0.000002;
-fn beta(i: usize) -> f32 {
-    START * (RISE * i as f32).exp()
-    // 30.0
+const START: f32 = 50.0;
+const END: f32 = 0.1;
+fn temp(i: usize) -> f32 {
+    START * ((END / START).ln() / STEPS as f32 * i as f32).exp()
+    // 50.0
 }
 
 // gif
@@ -40,12 +37,12 @@ const FRAMES: usize = 100;
 const LENGTH: usize = 5000; // in ms
 
 fn main() {
-    let name = "mmm";
+    let name = "meug";
 
     let mut lattice = Lattice::<N_ATOMS, WIDTH, HEIGHT>::new(
         energies,
         Some("my_seed"),
-        Some(Concentration::new([1.0, 1.0])),
+        Some(Concentration::new([1.0, 0.3, 1.0])),
     );
 
     let mut encoder = prepare_encoder(
@@ -58,7 +55,7 @@ fn main() {
     let start = std::time::Instant::now();
     let mut energies = Vec::with_capacity(STEPS);
     for i in 0..STEPS {
-        lattice.monte_carlo_swap(beta(i));
+        lattice.monte_carlo_swap_distr(MyDistr, 1.0 / temp(i));
         energies.push(lattice.internal_energy());
         if i % (STEPS / FRAMES) == 0 {
             encoder
@@ -88,7 +85,9 @@ fn main() {
         ))
         .expect("Error while writing frame!");
 
-    let steps_per_latice: Vec<f32> = (0..STEPS).map(|i| i as f32 / WIDTH as f32 /HEIGHT as f32).collect();
+    let steps_per_latice: Vec<f32> = (0..STEPS)
+        .map(|i| i as f32 / WIDTH as f32 / HEIGHT as f32)
+        .collect();
     float_plot(
         steps_per_latice.clone(),
         energies.clone(),
@@ -100,7 +99,7 @@ fn main() {
     .unwrap();
     float_plot(
         steps_per_latice,
-        (0..STEPS).map(|i| 1.0 / beta(i)).collect(),
+        (0..STEPS).map(temp).collect(),
         format!("out/{}_temp_curve.png", name),
         "Temperature curve",
         "steps",
@@ -108,7 +107,7 @@ fn main() {
     )
     .unwrap();
     float_plot(
-        (0..STEPS).map(|i| 1.0 / beta(i)).collect(),
+        (0..STEPS).map(temp).collect(),
         energies,
         format!("out/{}_temp.png", name),
         "",
@@ -116,4 +115,17 @@ fn main() {
         "internal energy",
     )
     .unwrap();
+}
+
+#[derive(Copy, Clone)]
+pub struct MyDistr;
+
+impl Distribution<isize> for MyDistr {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> isize {
+        if rng.gen() {
+            1
+        } else {
+            -1
+        }
+    }
 }
