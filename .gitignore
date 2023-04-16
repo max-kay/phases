@@ -1,6 +1,9 @@
 /target
+/python/__pycache__
 
 .DS_Store
-/out
-/logs
 /.vscode
+
+/out
+/logs_bin
+/logs_ter

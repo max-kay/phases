@@ -2,6 +2,7 @@
 #![feature(generic_const_exprs)]
 
 use std::io::Write;
+use std::sync::mpsc::Sender;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
@@ -30,73 +31,73 @@ fn energies(a1: Atom, a2: Atom) -> f32 {
 }
 
 // temp
-const TEMP_STEPS: u32 = 12;
-const START_TEMP: f32 = 50.0;
+const TEMP_STEPS: u32 = 30;
+const START_TEMP: f32 = 100.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 14;
+const CONCENTRATION_STEPS: usize = 21;
+const BLUE_CONCENTRATIONS: &[f64] = &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn main() {
     let start = std::time::Instant::now();
-    for c_c in 0..3 {
+    //let (tx, rx) = std::sync::mpsc::sync_channel::<String>(512);
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    std::thread::spawn(move || {
+        let file_name = format!("logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
+        let mut file = File::create(&file_name).expect("error while creating file");
+        writeln!(file,
+            "A simulation of three different atom types with bonding energies 00: {}, 01: {}, 02: {}, 11: {}, 12: {}, 22: {}",
+            energies(Atom::new(0), Atom::new(0)),
+            energies(Atom::new(0), Atom::new(1)),
+            energies(Atom::new(0), Atom::new(2)),
+            energies(Atom::new(1), Atom::new(1)),
+            energies(Atom::new(1), Atom::new(2)),
+            energies(Atom::new(2), Atom::new(2)),
+        ).expect("error while writing header");
+
+        writeln!(file, "c0,c1,c2,temp,energy,heat capacity").unwrap();
+
+        loop {
+            match rx.recv() {
+                Ok(line) => {
+                    writeln!(file, "{}", line).expect("an error occured while wrinting an line");
+                }
+                Err(err) => println!("an error occured while receiving a line: {}", err),
+            }
+        }
+    });
+
+    for c_blue in BLUE_CONCENTRATIONS {
         let temps: Vec<f32> = (0..TEMP_STEPS)
             .map(|i| START_TEMP / TEMP_STEPS as f32 * i as f32)
             .rev()
             .collect();
-        let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
+        let a_concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
             .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.8 + 0.1)
             .collect();
 
-        let results: Vec<(Vec<f32>, Vec<f32>)> = concentrations
+        let _: Vec<_> = a_concentrations
             .par_iter()
-            .map(|c_a| {
-                run_model_at_concentration(
-                    Concentration::new([*c_a, 1.0 - c_a, c_c as f64]),
-                    temps.clone(),
-                )
+            .map_with(tx.clone(), |tx, c_a| {
+                let concentration = Concentration::new([
+                    (1.0 - c_blue) * c_a,
+                    *c_blue,
+                    (1.0 - c_blue) * (1.0 - c_a),
+                ]);
+                run_model_at_concentration(concentration, temps.clone(), tx.clone())
             })
             .collect();
-
-        let file_name = format!(
-            "logs/data_{}_{}.csv",
-            Utc::now().format("%Y-%m-%d_%H-%M"),
-            c_c
-        );
-        let mut file = File::create(&file_name).expect("error while creating file");
-        writeln!(
-            file,
-            "concentration a,temperature,internal energy U,heat capacity"
-        )
-        .unwrap();
-        for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
-            for ((t, int_energy), heat_capacity) in temps
-                .iter()
-                .zip(int_energies.iter())
-                .zip(heat_capacities.iter())
-            {
-                writeln!(file, "{:?},{:?},{:?},{:?}", c, t, int_energy, heat_capacity).unwrap();
-            }
-        }
     }
-
     println!("took {:?}", start.elapsed());
 }
 
 fn run_model_at_concentration(
     concentration: Concentration,
     temps: Vec<f32>,
-) -> (Vec<f32>, Vec<f32>) {
-    // let mut encoder = prepare_encoder(
-    //     format!("out/{:.0}.gif", concentration.get_cs()[0] * 100.0),
-    //     WIDTH as u16,
-    //     HEIGHT as u16,
-    //     Some((5000 / TEMP_STEPS) as u16),
-    // );
-
-    let mut avg_int_energies: Vec<f32> = Vec::new();
-    let mut heat_capacity: Vec<f32> = Vec::new();
+    sender: Sender<String>,
+) {
     let mut lattice = Lattice::<3, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
@@ -119,25 +120,27 @@ fn run_model_at_concentration(
             .sum::<f32>()
             / int_energies.len() as f32;
         let avg_energy = avg_energy / (WIDTH * HEIGHT) as f32;
-        let variance = variance / (WIDTH * HEIGHT) as f32 / (WIDTH * HEIGHT) as f32;
-        avg_int_energies.push(avg_energy);
-        heat_capacity.push(variance / temp.powi(2));
+        let variance = variance / (WIDTH * HEIGHT * WIDTH * HEIGHT) as f32;
+
         let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+
+        sender
+            .send(format!(
+                "{:?},{:?},{:?},{:?},{:?},{:?}",
+                concentration.get_cs()[0],
+                concentration.get_cs()[1],
+                concentration.get_cs()[2],
+                temp,
+                avg_energy,
+                variance / temp / temp,
+            ))
+            .expect("an error occured while sending string");
         println!(
             "{} of {}",
             progress,
-            TEMP_STEPS * CONCENTRATION_STEPS as u32 * 3
+            TEMP_STEPS * CONCENTRATION_STEPS as u32 * BLUE_CONCENTRATIONS.len() as u32
         );
-        // encoder
-        //     .write_frame(&Frame::from_indexed_pixels(
-        //         WIDTH as u16,
-        //         HEIGHT as u16,
-        //         lattice.as_bytes(),
-        //         None,
-        //     ))
-        //     .unwrap();
     }
-    (avg_int_energies, heat_capacity)
 }
 
 #[derive(Copy, Clone)]

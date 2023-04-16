@@ -1,3 +1,4 @@
+use core::panic;
 use std::ops::Deref;
 
 use crate::ModularArray;
@@ -8,6 +9,16 @@ use rand_distr::WeightedIndex;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Atom<const N: usize>(u8);
+
+impl<const N: usize> Atom<N> {
+    pub fn new(val: u8) -> Self {
+        if val < N as u8 {
+            Self(val)
+        } else {
+            panic!()
+        }
+    }
+}
 
 impl<const N: usize> Deref for Atom<N> {
     type Target = u8;

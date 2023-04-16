@@ -28,6 +28,7 @@ where
     grid: ModularArray<Atom<N>, W, H>,
     rng: Pcg64,
     internal_energy: Option<f32>,
+    vacancy: Option<(isize, isize)>,
 }
 
 /// all constructors
@@ -71,6 +72,7 @@ where
             rng,
             concentration,
             internal_energy: None,
+            vacancy: None,
         };
         obj.internal_energy();
         obj
@@ -107,15 +109,6 @@ where
             + (self.bond_energies)(self.grid[idx], self.grid[(idx.0, idx.1 + 1)])
             + (self.bond_energies)(self.grid[idx], self.grid[(idx.0, idx.1 - 1)])
     }
-
-    // /// This function calculates the energy difference when swapping the indexes
-    // fn calc_delta_e(&mut self, idx_1: (isize, isize), idx_2: (isize, isize)) -> f32 {
-    //     let e_0 = self.energies_around(idx_1, self.grid[idx_1])
-    //         + self.energies_around(idx_2, self.grid[idx_2]);
-    //     let e_1 = self.energies_around(idx_1, self.grid[idx_2])
-    //         + self.energies_around(idx_2, self.grid[idx_1]);
-    //     e_1 - e_0
-    // }
 
     /// This function updates the energy if already calculated and recalculates the whole energy
     /// if it is not already calculated.
@@ -280,6 +273,43 @@ where
             false
         }
     }
+
+    pub fn move_vacancy(&mut self, beta: f32) -> bool {
+        // this function does not put any other values in to the vacancy spot.
+        // it just reinterprets this spot as being empty thus having bond energies = 0
+
+        if let Some(idx) = self.vacancy {
+            let other_idx = match self.rng.gen_range(0..4) {
+                0 => (idx.0 + 1, idx.1),
+                1 => (idx.0 - 1, idx.1),
+                2 => (idx.0, idx.1 + 1),
+                3 => (idx.0, idx.1 - 1),
+                _ => unreachable!(),
+            };
+
+            // this part 
+            let e_0 = self.energies_around(other_idx);
+            self.swap_idxs(idx, other_idx);
+            let e_1 = self.energies_around(idx);
+
+
+            let delta_e = e_1 - e_0;
+            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
+                self.update_energy(delta_e);
+                self.vacancy = Some(other_idx);
+                true
+            } else {
+                self.swap_idxs(idx, other_idx);
+                false
+            }
+        } else {
+            self.vacancy = Some((
+                self.rng.gen_range(0..W as isize),
+                self.rng.gen_range(0..H as isize),
+            ));
+            self.move_vacancy(beta)
+        }
+    }
 }
 
 impl<const N: usize, const W: usize, const H: usize> Lattice<N, W, H>
@@ -290,6 +320,32 @@ where
     where
         &'a ModularArray<Atom<N>, W, H>: Into<&'a [u8]>,
     {
+        // how should I deal with vacancies
         (&self.grid).into()
     }
 }
+
+// #[derive(Default)]
+// pub struct Model<const N: usize, const W: usize, const H: usize, D: Distribution<isize>>
+// where
+//     [(); W * H]:,
+// {
+//     name: String,
+//     concentrations: Vec<Concentration<N>>,
+//     energies: Option<fn(Atom<N>, Atom<N>) -> f32>,
+//     temps: Vec<f32>,
+//     distr: Option<D>,
+// }
+
+// impl<const N: usize, const W: usize, const H: usize, D: Distribution<isize>> Model<N, W, H, D>
+// where
+//     [(); W * H]:,
+// {
+//     // pub fn new() -> Self {
+//     //     // Self::default()
+//     // }
+
+//     pub fn run() -> Result<(), Box<dyn Error>> {
+//         Ok(())
+//     }
+// }

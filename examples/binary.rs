@@ -6,35 +6,31 @@ use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
 use phases::Lattice;
-use rand_distr::Distribution;
 use rayon::prelude::*;
 
 // model parameters
 type Atom = phases::Atom<2>;
 type Concentration = phases::Concentration<2>;
-const WIDTH: usize = 256;
+const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
-const STEPS: usize = WIDTH * HEIGHT * 200;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 300;
+const STEPS: usize = WIDTH * HEIGHT * 300;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
         (0, 0) => -4.0,
         (1, 1) => -1.0,
         (0, 1) | (1, 0) => 3.0,
-        // (2, 2) => 0.0,
-        // (2, 0) | (0, 2) => 0.0,
-        // (2, 1) | (1, 2) => 0.0,
         _ => panic!(),
     }
 }
 
 // temp
-const TEMP_STEPS: u32 = 20;
-const START_TEMP: f32 = 100.0;
+const TEMP_STEPS: u32 = 100;
+const START_TEMP: f32 = 300.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 21;
+const CONCENTRATION_STEPS: usize = 28;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -51,16 +47,15 @@ fn main() {
 
     let results: Vec<(Vec<f32>, Vec<f32>)> = concentrations
         .par_iter()
-        .map(|c_a| run_model_at_concentration(Concentration::new([*c_a, 1.0 - c_a]), temps.clone()))
+        .map(|c_a| {
+            run_model_with_concentration(Concentration::new([*c_a, 1.0 - c_a]), temps.clone())
+        })
         .collect();
 
-    let file_name = format!("logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
+    let file_name = format!("logs_bin/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
     let mut file = File::create(&file_name).expect("error while creating file");
-    writeln!(
-        file,
-        "concentration a,temperature,internal energy U,heat capacity"
-    )
-    .unwrap();
+    writeln!(file, "c,temp,energy,heat capacity").unwrap();
+    
     for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
         for ((t, int_energy), heat_capacity) in temps
             .iter()
@@ -72,11 +67,9 @@ fn main() {
     }
 
     println!("took {:?}", start.elapsed());
-
-    // Command::new("./data.py").arg(&file_name).output().unwrap();
 }
 
-fn run_model_at_concentration(
+fn run_model_with_concentration(
     concentration: Concentration,
     temps: Vec<f32>,
 ) -> (Vec<f32>, Vec<f32>) {
@@ -94,12 +87,12 @@ fn run_model_at_concentration(
         let beta = 1.0 / temp;
 
         for _ in 0..EQUILIBRIUM_STEPS {
-            lattice.monte_carlo_swap_distr(MyDistr, beta);
+            lattice.move_vacancy(beta);
         }
 
         let mut int_energies: Vec<f32> = Vec::with_capacity(STEPS);
         for _ in 0..STEPS {
-            lattice.monte_carlo_swap_distr(MyDistr, beta);
+            lattice.move_vacancy(beta);
             int_energies.push(lattice.internal_energy())
         }
 
@@ -130,17 +123,4 @@ fn run_model_at_concentration(
         //     .unwrap();
     }
     (avg_int_energies, heat_capacity)
-}
-
-#[derive(Copy, Clone)]
-pub struct MyDistr;
-
-impl Distribution<isize> for MyDistr {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> isize {
-        if rng.gen() {
-            1
-        } else {
-            -1
-        }
-    }
 }
