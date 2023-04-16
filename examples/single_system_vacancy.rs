@@ -1,12 +1,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 use gif::Frame;
-use phases::{anim::prepare_encoder, plots::float_plot, System, ModularArray};
+use phases::{anim::prepare_encoder, plots::float_plot, Array2d, System};
 
 // model parameters
 const N_ATOMS: usize = 2;
-type Atom = phases::AtomNum<N_ATOMS>;
-type Concentration = phases::ConcentrationNum<N_ATOMS>;
+type Atom = phases::NumAtom<N_ATOMS>;
+type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 400;
 const HEIGHT: usize = 400;
 const STEPS: usize = WIDTH * HEIGHT * 5000;
@@ -37,7 +37,7 @@ const LENGTH: usize = 5000; // in ms
 fn main() {
     let name = "vacancy";
 
-    let mut lattice = System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(
+    let mut lattice = System::<Array2d<Atom, WIDTH, HEIGHT>>::new(
         energies,
         Some("my_seed"),
         Some(Concentration::new([1.0, 1.0])),

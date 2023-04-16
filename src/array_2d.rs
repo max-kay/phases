@@ -2,19 +2,19 @@ use std::ops::{Index, IndexMut};
 
 use rand::Rng;
 
-use crate::{MyRng, RandAtom, Storage};
+use crate::{Atom, Lattice, MyRng};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
 #[derive(Clone, Copy)]
-pub struct ModularArray<T, const W: usize, const H: usize>
+pub struct Array2d<T, const W: usize, const H: usize>
 where
     [(); W * H]:,
 {
     pub grid: [T; W * H],
 }
 
-impl<T, const W: usize, const H: usize> ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> Array2d<T, W, H>
 where
     [(); W * H]:,
     T: Copy,
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> Index<(isize, isize)> for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> Index<(isize, isize)> for Array2d<T, W, H>
 where
     [(); W * H]:,
 {
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for ModularArray<T, W, H>
+impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for Array2d<T, W, H>
 where
     [(); W * H]:,
 {
@@ -55,7 +55,7 @@ where
     }
 }
 
-impl<T: Default + Copy, const W: usize, const H: usize> Default for ModularArray<T, W, H>
+impl<T: Default + Copy, const W: usize, const H: usize> Default for Array2d<T, W, H>
 where
     [(); W * H]:,
 {
@@ -64,7 +64,7 @@ where
     }
 }
 
-impl<T: Copy + RandAtom, const W: usize, const H: usize> Storage for ModularArray<T, W, H>
+impl<T: Copy + Atom, const W: usize, const H: usize> Lattice for Array2d<T, W, H>
 where
     [(); W * H]:,
 {

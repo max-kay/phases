@@ -1,18 +1,18 @@
 use core::panic;
 use std::ops::Deref;
 
-use crate::Concentration;
-use crate::ModularArray;
-use crate::RandAtom;
+use crate::Array2d;
+use crate::Atom;
+use crate::CTrait;
 use rand::prelude::*;
 use rand::Rng;
 use rand_distr::WeightedIndex;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct AtomNum<const N: usize>(u8);
+pub struct NumAtom<const N: usize>(u8);
 
-impl<const N: usize> Deref for AtomNum<N> {
+impl<const N: usize> Deref for NumAtom<N> {
     type Target = u8;
 
     fn deref(&self) -> &Self::Target {
@@ -20,20 +20,20 @@ impl<const N: usize> Deref for AtomNum<N> {
     }
 }
 
-impl<const N: usize> RandAtom for AtomNum<N> {
-    type RandConcentration = ConcentrationNum<N>;
+impl<const N: usize> Atom for NumAtom<N> {
+    type Concentration = NumC<N>;
 
     fn uniform(rng: &mut crate::MyRng) -> Self {
         Self(rng.gen_range(0..N as u8))
     }
 
-    fn with_concentration(rng: &mut crate::MyRng, cs: Self::RandConcentration) -> Self {
+    fn with_concentration(rng: &mut crate::MyRng, cs: Self::Concentration) -> Self {
         let distr = WeightedIndex::new(&cs.cs).unwrap();
         Self(distr.sample(rng) as u8)
     }
 }
 
-impl<const N: usize> AtomNum<N> {
+impl<const N: usize> NumAtom<N> {
     pub fn new(val: u8) -> Self {
         if val < N as u8 {
             Self(val)
@@ -44,11 +44,11 @@ impl<const N: usize> AtomNum<N> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ConcentrationNum<const N: usize> {
+pub struct NumC<const N: usize> {
     cs: [f64; N],
 }
 
-impl<const N: usize> ConcentrationNum<N> {
+impl<const N: usize> NumC<N> {
     pub fn new(ns: [f64; N]) -> Self {
         let n_tot: f64 = ns.iter().sum();
         let mut cs = ns;
@@ -61,7 +61,7 @@ impl<const N: usize> ConcentrationNum<N> {
     }
 }
 
-impl<const N: usize> Concentration for ConcentrationNum<N> {
+impl<const N: usize> CTrait for NumC<N> {
     fn uniform() -> Self {
         Self::new([1.0; N])
     }
@@ -70,15 +70,14 @@ impl<const N: usize> Concentration for ConcentrationNum<N> {
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize> From<&ModularArray<AtomNum<N>, W, H>>
-    for &[u8]
+impl<const W: usize, const H: usize, const N: usize> From<&Array2d<NumAtom<N>, W, H>> for &[u8]
 where
     [(); W * H]:,
 {
-    fn from(value: &ModularArray<AtomNum<N>, W, H>) -> Self {
+    fn from(value: &Array2d<NumAtom<N>, W, H>) -> Self {
         unsafe {
             let ptr = value.grid.as_ptr() as *const u8;
-            let len = value.grid.len() * std::mem::size_of::<AtomNum<N>>();
+            let len = value.grid.len() * std::mem::size_of::<NumAtom<N>>();
             std::slice::from_raw_parts(ptr, len)
         }
     }

@@ -1,13 +1,13 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 use gif::Frame;
-use phases::{anim::prepare_encoder, plots::float_plot, ModularArray, System};
+use phases::{anim::prepare_encoder, plots::float_plot, Array2d, System};
 use rand_distr::Distribution;
 
 // model parameters
 const N_ATOMS: usize = 3;
-type Atom = phases::AtomNum<N_ATOMS>;
-type Concentration = phases::ConcentrationNum<N_ATOMS>;
+type Atom = phases::NumAtom<N_ATOMS>;
+type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 400;
 const HEIGHT: usize = 400;
 const STEPS: usize = WIDTH * HEIGHT * 4000;
@@ -39,7 +39,7 @@ const LENGTH: usize = 5000; // in ms
 fn main() {
     let name = "meug";
 
-    let mut lattice = System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(
+    let mut lattice = System::<Array2d<Atom, WIDTH, HEIGHT>>::new(
         energies,
         Some("my_seed"),
         Some(Concentration::new([1.0, 0.3, 1.0])),
@@ -68,7 +68,6 @@ fn main() {
                 .expect("Error while writing frame!");
         }
     }
-    println!("took {:?}", std::time::Instant::now() - start);
 
     let mut encoder = prepare_encoder(
         format!("./out/{}_last_frame.gif", name),
@@ -115,10 +114,12 @@ fn main() {
         "internal energy",
     )
     .unwrap();
+    println!("took {:?}", std::time::Instant::now() - start);
 }
 
 #[derive(Copy, Clone)]
 pub struct MyDistr;
+
 impl Distribution<(isize, isize)> for MyDistr {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> (isize, isize) {
         (

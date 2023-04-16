@@ -10,25 +10,29 @@ use rand::SeedableRng;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
-mod modular_array;
+mod array_2d;
+mod array_3d;
 
 pub mod anim;
 pub mod plots;
 
 mod atoms;
-pub use atoms::{AtomNum, ConcentrationNum};
+pub use atoms::{NumAtom, NumC};
 
-pub use modular_array::ModularArray;
+pub use array_2d::Array2d;
+pub use array_3d::Array3d;
 
 type MyRng = Pcg64;
 
-pub trait Storage: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
-    type Atom: Copy + RandAtom;
+pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
+    type Atom: Copy + Atom;
     type Index: Copy;
     fn fill_value(val: Self::Atom) -> Self;
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self;
+
     fn all_neighbours(&self) -> Vec<(Self::Atom, Self::Atom)>;
     fn all_neighbours_to(&self, idx: Self::Index) -> Vec<Self::Index>;
+
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index;
     fn choose_idxs_uniformly(&self, rng: &mut MyRng) -> (Self::Index, Self::Index) {
         (self.random_idx(rng), self.random_idx(rng))
@@ -42,32 +46,32 @@ pub trait Storage: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
 }
 
-pub trait RandAtom: Default + Eq + PartialEq {
-    type RandConcentration: Copy + Concentration;
+pub trait Atom: Default + Eq + PartialEq {
+    type Concentration: Copy + CTrait;
     fn uniform(rng: &mut MyRng) -> Self;
-    fn with_concentration(rng: &mut MyRng, cs: Self::RandConcentration) -> Self;
+    fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
 }
 
-pub trait Concentration {
+pub trait CTrait {
     fn uniform() -> Self;
     fn max_entropy(&self) -> f32;
 }
 
-pub struct System<S: Storage> {
-    bond_energies: fn(S::Atom, S::Atom) -> f32,
-    concentration: <S::Atom as RandAtom>::RandConcentration,
-    storage: S,
+pub struct System<L: Lattice> {
+    bond_energies: fn(L::Atom, L::Atom) -> f32,
+    concentration: <L::Atom as Atom>::Concentration,
+    storage: L,
     rng: MyRng,
     internal_energy: Option<f32>,
-    vacancy: Option<S::Index>,
+    vacancy: Option<L::Index>,
 }
 
 /// all constructors
-impl<S: Storage> System<S> {
+impl<L: Lattice> System<L> {
     pub fn new(
-        bond_energies: fn(S::Atom, S::Atom) -> f32,
+        bond_energies: fn(L::Atom, L::Atom) -> f32,
         seed: Option<&str>,
-        concentration: Option<<S::Atom as RandAtom>::RandConcentration>,
+        concentration: Option<<L::Atom as Atom>::Concentration>,
     ) -> Self {
         let mut rng = match seed {
             Some(seed) => Seeder::from(seed).make_rng(),
@@ -76,12 +80,12 @@ impl<S: Storage> System<S> {
 
         let (grid, concentration) = match concentration {
             None => (
-                S::fill_with_fn(&mut |_| S::Atom::uniform(&mut rng)),
-                <S::Atom as RandAtom>::RandConcentration::uniform(),
+                L::fill_with_fn(&mut |_| L::Atom::uniform(&mut rng)),
+                <L::Atom as Atom>::Concentration::uniform(),
             ),
             Some(concentration) => (
-                S::fill_with_fn(&mut |_| {
-                    <S::Atom as RandAtom>::with_concentration(&mut rng, concentration)
+                L::fill_with_fn(&mut |_| {
+                    <L::Atom as Atom>::with_concentration(&mut rng, concentration)
                 }),
                 concentration,
             ),
@@ -101,7 +105,7 @@ impl<S: Storage> System<S> {
 }
 
 /// everything energies
-impl<S: Storage> System<S> {
+impl<L: Lattice> System<L> {
     /// This function returns the total energy of the system.
     /// This is fast when the energy is already calculated and recalculates it if it is not.
     pub fn internal_energy(&mut self) -> f32 {
@@ -121,7 +125,7 @@ impl<S: Storage> System<S> {
     }
 
     /// This function returns the local energy around the idx if it was swapped to atom_at_idx
-    fn energies_around(&self, idx: S::Index) -> f32 {
+    fn energies_around(&self, idx: L::Index) -> f32 {
         self.storage
             .all_neighbours_to(idx)
             .iter()
@@ -142,14 +146,14 @@ impl<S: Storage> System<S> {
     }
 }
 
-impl<S: Storage> System<S> {
-    pub fn get_cs(&self) -> <S::Atom as RandAtom>::RandConcentration {
+impl<L: Lattice> System<L> {
+    pub fn get_cs(&self) -> <L::Atom as Atom>::Concentration {
         self.concentration
     }
 }
 
 /// all swapping processes
-impl<S: Storage> System<S> {
+impl<L: Lattice> System<L> {
     /// This uniformly chooses two lattice point and swaps the elements if the resulting energy is lower.
     /// If there is no swap it repeats this process until it succeds.
     pub fn swap_uniform(&mut self) -> bool {
@@ -177,7 +181,7 @@ impl<S: Storage> System<S> {
     /// If there is no swap it repeats this process until it succeds.
     pub fn swap_distr<T>(&mut self, distr: T) -> bool
     where
-        T: Distribution<S::Index> + Copy,
+        T: Distribution<L::Index> + Copy,
     {
         let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self
@@ -225,7 +229,7 @@ impl<S: Storage> System<S> {
     /// using a distribution for the distance between the two lattice sites
     pub fn monte_carlo_swap_distr<T>(&mut self, distr: T, beta: f32) -> bool
     where
-        T: Distribution<S::Index> + Copy,
+        T: Distribution<L::Index> + Copy,
     {
         let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self
@@ -258,7 +262,11 @@ impl<S: Storage> System<S> {
                 .choose(&mut self.rng)
                 .expect("all atoms have neighbours");
 
-            // TODO argue why this is correct
+            // This is correct because this model assumes there is no interaction between
+            // a neighbouring atom and a vacancy
+            // The value in the grid where the atom sits leads to an over counting
+            // of the energy between index 1 and 2
+            // but this doesnt matter because it is in e_0 and e_1 and thus subtrackted out
             let e_0 = self.energies_around(*other_idx);
             self.storage.swap_idxs(idx, *other_idx);
             let e_1 = self.energies_around(idx);
@@ -279,40 +287,15 @@ impl<S: Storage> System<S> {
     }
 }
 
-impl<const N: usize, const W: usize, const H: usize> System<ModularArray<AtomNum<N>, W, H>>
+impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>>
 where
     [(); W * H]:,
 {
     pub fn as_bytes<'a>(&'a self) -> &'a [u8]
     where
-        &'a ModularArray<AtomNum<N>, W, H>: Into<&'a [u8]>,
+        &'a Array2d<NumAtom<N>, W, H>: Into<&'a [u8]>,
     {
-        // how should I deal with vacancies TODO
+        // the existance of vacancies is purposely ignored
         (&self.storage).into()
     }
 }
-
-// #[derive(Default)]
-// pub struct Model<const N: usize, const W: usize, const H: usize, D: Distribution<isize>>
-// where
-//     [(); W * H]:,
-// {
-//     name: String,
-//     concentrations: Vec<Concentration<N>>,
-//     energies: Option<fn(Atom<N>, Atom<N>) -> f32>,
-//     temps: Vec<f32>,
-//     distr: Option<D>,
-// }
-
-// impl<const N: usize, const W: usize, const H: usize, D: Distribution<isize>> Model<N, W, H, D>
-// where
-//     [(); W * H]:,
-// {
-//     // pub fn new() -> Self {
-//     //     // Self::default()
-//     // }
-
-//     pub fn run() -> Result<(), Box<dyn Error>> {
-//         Ok(())
-//     }
-// }

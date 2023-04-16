@@ -5,12 +5,12 @@ use std::io::Write;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{System, ModularArray};
+use phases::{Array2d, System};
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::AtomNum<2>;
-type Concentration = phases::ConcentrationNum<2>;
+type Atom = phases::NumAtom<2>;
+type Concentration = phases::NumC<2>;
 const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 300;
@@ -82,7 +82,8 @@ fn run_model_with_concentration(
 
     let mut avg_int_energies: Vec<f32> = Vec::new();
     let mut heat_capacity: Vec<f32> = Vec::new();
-    let mut lattice = System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
+    let mut lattice =
+        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 

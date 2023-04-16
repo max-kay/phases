@@ -6,13 +6,13 @@ use std::sync::mpsc::Sender;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{ModularArray, System};
+use phases::{Array2d, System};
 use rand_distr::Distribution;
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::AtomNum<3>;
-type Concentration = phases::ConcentrationNum<3>;
+type Atom = phases::NumAtom<3>;
+type Concentration = phases::NumC<3>;
 const WIDTH: usize = 256;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 200;
@@ -99,7 +99,7 @@ fn run_model_at_concentration(
     sender: Sender<String>,
 ) {
     let mut lattice =
-        System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
+        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
