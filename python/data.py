@@ -1,54 +1,48 @@
+import pretty_errors
 import numpy as np
-import pandas as pd
 from matplotlib import cm
+import pandas as pd
+import numpy as np
+from scipy.integrate import cumulative_trapezoid
 
 
-def get_entropy_and_free_energy(df: pd.DataFrame) -> pd.DataFrame:
-    cs = df["c"].unique()
-
-    over_all_entropy = []
-
-    for c in cs:
-        dfi = df[df["c"] == c]
-        temps = dfi["temp"].values
-        cs = dfi["c"].values
-        # max_entropy = -(c * np.log(c) + (1 - c) * np.log(1 - c))
-        intergral = 0
-        entropy = [intergral]
-        for i in range(0, len(cs) - 1):
-            if temps[i] == 0:
-                print("skipped one step in intgration for entropy")
-                entropy.append(intergral)
-                continue
-            intergral += (
-                (temps[i + 1] - temps[i])
-                / 2
-                * (cs[i + 1] / temps[i + 1] + cs[i] / temps[i])
-            )
-            entropy.append(intergral)
-        over_all_entropy += entropy
-
-    df["entropy"] = over_all_entropy
-
-    df["free energy"] = df["energy"] - df["temp"] * df["entropy"]
+def prepare_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df.sort_values(["c", "temp"], ascending=[True, True], inplace=True)
+    add_entropy_and_free_energy(df)
+    add_chemical_potential(df)
     return df
 
 
-def get_chemical_potential(df: pd.DataFrame) -> pd.DataFrame:
-    temps = df["temp"].unique()
+def add_entropy_and_free_energy(df: pd.DataFrame):
+    df["entropy"] = np.nan
+    df["free energy"] = np.nan
 
-    over_all_mu = []
-    for t in temps:
-        dfi = df[df["temp"] == t]
-        energies = dfi["energy"].values
-        cs = dfi["c"].values
-        over_all_mu.append(0)
-        for i in range(0, len(cs) - 1):
-            energies[i] 
-        over_all_entropy += entropy
+    def fn(group):
+        entropy = cumulative_trapezoid(
+            np.where(
+                np.bitwise_or(group["temp"].values == 0, group["c"].isna()),
+                0,
+                group["c"].values / group["temp"].values,
+            ),
+            x=group["temp"].values,
+            initial=0,
+        )
+        df.loc[group.index, "entropy"] = entropy
+        df.loc[group.index, "free energy"] = group["energy"] - group["temp"] * entropy
 
-    df["mu"] = over_all_mu
-    return df
+    df.groupby("c").apply(fn)
+
+
+def add_chemical_potential(df: pd.DataFrame):
+    df["mu a"] = np.nan
+
+    def fn(group):
+        mu_a = np.gradient(group["free energy"], group["c"])
+        df.loc[group.index, "mu a"] = mu_a
+
+    df.groupby("temp").apply(fn)
 
 
 def plot_grid_3d(xs, ys, zs, ax_3d, cmap=cm.coolwarm):
@@ -61,3 +55,8 @@ def plot_grid_3d(xs, ys, zs, ax_3d, cmap=cm.coolwarm):
         linewidth=0,
         antialiased=False,
     )
+
+
+if __name__ == "__main__":
+    df = prepare_data("logs_bin/data_2023-04-16_00-05.csv")
+    print(df)
