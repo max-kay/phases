@@ -1,13 +1,13 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 use gif::Frame;
-use phases::{anim::prepare_encoder, plots::float_plot, Lattice};
+use phases::{anim::prepare_encoder, plots::float_plot, ModularArray, System};
 use rand_distr::Distribution;
 
 // model parameters
 const N_ATOMS: usize = 3;
-type Atom = phases::Atom<N_ATOMS>;
-type Concentration = phases::Concentration<N_ATOMS>;
+type Atom = phases::AtomNum<N_ATOMS>;
+type Concentration = phases::ConcentrationNum<N_ATOMS>;
 const WIDTH: usize = 400;
 const HEIGHT: usize = 400;
 const STEPS: usize = WIDTH * HEIGHT * 4000;
@@ -39,7 +39,7 @@ const LENGTH: usize = 5000; // in ms
 fn main() {
     let name = "meug";
 
-    let mut lattice = Lattice::<N_ATOMS, WIDTH, HEIGHT>::new(
+    let mut lattice = System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(
         energies,
         Some("my_seed"),
         Some(Concentration::new([1.0, 0.3, 1.0])),
@@ -119,13 +119,11 @@ fn main() {
 
 #[derive(Copy, Clone)]
 pub struct MyDistr;
-
-impl Distribution<isize> for MyDistr {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> isize {
-        if rng.gen() {
-            1
-        } else {
-            -1
-        }
+impl Distribution<(isize, isize)> for MyDistr {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> (isize, isize) {
+        (
+            if rng.gen() { 1 } else { -1 },
+            if rng.gen() { 1 } else { -1 },
+        )
     }
 }

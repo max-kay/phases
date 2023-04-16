@@ -5,12 +5,12 @@ use std::io::Write;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::Lattice;
+use phases::{System, ModularArray};
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::Atom<2>;
-type Concentration = phases::Concentration<2>;
+type Atom = phases::AtomNum<2>;
+type Concentration = phases::ConcentrationNum<2>;
 const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 300;
@@ -55,7 +55,7 @@ fn main() {
     let file_name = format!("logs_bin/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
     let mut file = File::create(&file_name).expect("error while creating file");
     writeln!(file, "c,temp,energy,heat capacity").unwrap();
-    
+
     for (c, (int_energies, heat_capacities)) in concentrations.iter().zip(results.iter()) {
         for ((t, int_energy), heat_capacity) in temps
             .iter()
@@ -82,7 +82,7 @@ fn run_model_with_concentration(
 
     let mut avg_int_energies: Vec<f32> = Vec::new();
     let mut heat_capacity: Vec<f32> = Vec::new();
-    let mut lattice = Lattice::<2, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
+    let mut lattice = System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 

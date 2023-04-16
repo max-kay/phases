@@ -6,13 +6,13 @@ use std::sync::mpsc::Sender;
 use std::{fs::File, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::Lattice;
+use phases::{ModularArray, System};
 use rand_distr::Distribution;
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::Atom<3>;
-type Concentration = phases::Concentration<3>;
+type Atom = phases::AtomNum<3>;
+type Concentration = phases::ConcentrationNum<3>;
 const WIDTH: usize = 256;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 200;
@@ -98,7 +98,8 @@ fn run_model_at_concentration(
     temps: Vec<f32>,
     sender: Sender<String>,
 ) {
-    let mut lattice = Lattice::<3, WIDTH, HEIGHT>::new(energies, None, Some(concentration));
+    let mut lattice =
+        System::<ModularArray<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
@@ -146,12 +147,11 @@ fn run_model_at_concentration(
 #[derive(Copy, Clone)]
 pub struct MyDistr;
 
-impl Distribution<isize> for MyDistr {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> isize {
-        if rng.gen() {
-            1
-        } else {
-            -1
-        }
+impl Distribution<(isize, isize)> for MyDistr {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> (isize, isize) {
+        (
+            if rng.gen() { 1 } else { -1 },
+            if rng.gen() { 1 } else { -1 },
+        )
     }
 }
