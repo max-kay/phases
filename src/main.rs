@@ -1,9 +1,11 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::io::Write;
-use std::sync::mpsc::Sender;
-use std::{fs::File, sync::atomic::AtomicU64};
+use std::{
+    fs::File,
+    io::Write,
+    sync::{atomic::AtomicU64, mpsc::Sender},
+};
 
 use chrono::Utc;
 use phases::{Array2d, System};

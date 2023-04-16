@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    collections::HashMap,
+    ops::{Index, IndexMut},
+};
 
 use rand::Rng;
 
@@ -97,14 +100,20 @@ where
         out
     }
 
-    fn all_neighbours(&self) -> Vec<(Self::Atom, Self::Atom)> {
-        let mut out = Vec::with_capacity(W * H * 2);
+    fn all_neighbours(&self) -> HashMap<(Self::Atom, Self::Atom), u32> {
+        let mut out = HashMap::new();
         for x in 0..W as isize {
             for y in 0..H as isize {
                 for z in 0..D as isize {
-                    out.push((self[(x, y, z)], self[(x - 1, y, z)]));
-                    out.push((self[(x, y, z)], self[(x, y - 1, z)]));
-                    out.push((self[(x, y, z)], self[(x, y, z - 1)]));
+                    out.entry((self[(x, y, z)], self[(x - 1, y, z)]))
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
+                    out.entry((self[(x, y, z)], self[(x, y - 1, z)]))
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
+                    out.entry((self[(x, y, z)], self[(x, y, z - 1)]))
+                        .and_modify(|e| *e += 1)
+                        .or_insert(1);
                 }
             }
         }

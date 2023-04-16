@@ -1,14 +1,11 @@
 use core::panic;
 use std::ops::Deref;
 
-use crate::Array2d;
-use crate::Atom;
-use crate::CTrait;
-use rand::prelude::*;
-use rand::Rng;
+use crate::{Array2d, Atom, CTrait};
+use rand::{prelude::*, Rng};
 use rand_distr::WeightedIndex;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct NumAtom<const N: usize>(u8);
 

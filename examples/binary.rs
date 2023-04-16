@@ -1,8 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::io::Write;
-use std::{fs::File, sync::atomic::AtomicU64};
+use std::{fs::File, io::Write, sync::atomic::AtomicU64};
 
 use chrono::Utc;
 use phases::{Array2d, System};

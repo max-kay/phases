@@ -1,12 +1,12 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs, concat_idents)]
-use std::ops::Index;
-use std::ops::IndexMut;
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    ops::{Index, IndexMut},
+};
 
-use rand::distributions::Distribution;
-use rand::seq::SliceRandom;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::{distributions::Distribution, seq::SliceRandom, Rng, SeedableRng};
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 
@@ -30,7 +30,7 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn fill_value(val: Self::Atom) -> Self;
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self;
 
-    fn all_neighbours(&self) -> Vec<(Self::Atom, Self::Atom)>;
+    fn all_neighbours(&self) -> HashMap<(Self::Atom, Self::Atom), u32>;
     fn all_neighbours_to(&self, idx: Self::Index) -> Vec<Self::Index>;
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index;
@@ -46,7 +46,7 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
 }
 
-pub trait Atom: Default + Eq + PartialEq {
+pub trait Atom: Default + Eq + PartialEq + Hash {
     type Concentration: Copy + CTrait;
     fn uniform(rng: &mut MyRng) -> Self;
     fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
@@ -116,8 +116,8 @@ impl<L: Lattice> System<L> {
                 .storage
                 .all_neighbours()
                 .iter()
-                .fold(0.0, |energy, (a1, a2)| {
-                    energy + (self.bond_energies)(*a1, *a2)
+                .fold(0.0, |energy, ((a1, a2), count)| {
+                    energy + (self.bond_energies)(*a1, *a2) * *count as f32
                 });
             self.internal_energy = Some(energy);
             energy
