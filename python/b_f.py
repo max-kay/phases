@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 import data
 
 if len(argv) == 2:
-    df = data.prepare_data(argv[1])
+    name = argv[1]
 else:
-    df = data.prepare_data("logs_bin/data_2023-04-16_00-05.csv")
+    name = "b_2_f_2023-04-17_14-10"
 
+df = data.prepare_data(f"out/logs/{name}.csv")
 
 fig = plt.figure()
 
@@ -65,5 +66,6 @@ ax.set_xlabel("$X_a$")
 ax.set_ylabel("T")
 ax.set_zlabel("$\mu _a$")
 
+plt.get_current_fig_manager().full_screen_toggle()
 
 plt.show()

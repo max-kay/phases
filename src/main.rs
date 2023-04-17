@@ -44,10 +44,9 @@ static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn main() {
     let start = std::time::Instant::now();
-    //let (tx, rx) = std::sync::mpsc::sync_channel::<String>(512);
     let (tx, rx) = std::sync::mpsc::channel::<String>();
     std::thread::spawn(move || {
-        let file_name = format!("logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
+        let file_name = format!("out/logs/data_{}.csv", Utc::now().format("%Y-%m-%d_%H-%M"));
         let mut file = File::create(&file_name).expect("error while creating file");
         writeln!(file,
             "A simulation of three different atom types with bonding energies 00: {}, 01: {}, 02: {}, 11: {}, 12: {}, 22: {}",
@@ -61,13 +60,8 @@ fn main() {
 
         writeln!(file, "c0,c1,c2,temp,energy,heat capacity").unwrap();
 
-        loop {
-            match rx.recv() {
-                Ok(line) => {
-                    writeln!(file, "{}", line).expect("an error occured while wrinting an line");
-                }
-                Err(err) => println!("an error occured while receiving a line: {}", err),
-            }
+        while let Ok(line) = rx.recv() {
+            writeln!(file, "{}", line).expect("an error occured while wrinting an line");
         }
     });
 

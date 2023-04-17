@@ -1,3 +1,4 @@
+#!/opt/homebrew/Caskroom/miniconda/base/envs/datasc
 import pretty_errors
 import numpy as np
 from matplotlib import cm
@@ -6,8 +7,8 @@ import numpy as np
 from scipy.integrate import cumulative_trapezoid
 
 
-def prepare_data(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
+def prepare_data(path: str, **kwarg) -> pd.DataFrame:
+    df = pd.read_csv(path, header=1, **kwarg)
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.sort_values(["c", "temp"], ascending=[True, True], inplace=True)
     add_entropy_and_free_energy(df)
@@ -58,5 +59,5 @@ def plot_grid_3d(xs, ys, zs, ax_3d, cmap=cm.coolwarm):
 
 
 if __name__ == "__main__":
-    df = prepare_data("logs_bin/data_2023-04-16_00-05.csv")
+    df = prepare_data("out/logs_bin/data_2023-04-16_00-05.csv")
     print(df)

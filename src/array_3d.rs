@@ -5,7 +5,7 @@ use std::{
 
 use rand::Rng;
 
-use crate::{Atom, Lattice, MyRng};
+use crate::{ATrait, Lattice, MyRng};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
@@ -74,7 +74,8 @@ where
     }
 }
 
-impl<T: Copy + Atom, const W: usize, const H: usize, const D: usize> Lattice for Array3d<T, W, H, D>
+impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
+    for Array3d<T, W, H, D>
 where
     [(); W * H * D]:,
 {

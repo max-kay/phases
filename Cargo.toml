@@ -7,7 +7,6 @@ edition = "2021"
 chrono = "0.4.24"
 gif = "0.12.0"
 num-integer = "0.1.45"
-plotters = "0.3.4"
 rand = { version = "0.8.5", features = ["small_rng"] }
 rand_distr = { version = "0.4.3", features = ["alloc"]}
 rand_pcg = "0.3.1"
