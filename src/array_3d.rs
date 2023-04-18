@@ -5,11 +5,11 @@ use std::{
 
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng};
+use crate::{ATrait, Lattice, MyRng, NumAtom};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
-    pub grid: Box<[[[T; D]; H]; W]>,
+    pub grid: Box<[[[T; W]; H]; D]>,
 }
 
 impl<T, const W: usize, const H: usize, const D: usize> Array3d<T, W, H, D>
@@ -21,7 +21,7 @@ where
         T: Default + Clone,
     {
         Self {
-            grid: Box::new([[[T::default(); D]; H]; W]),
+            grid: Box::new([[[T::default(); W]; H]; D]),
         }
     }
 }
@@ -36,7 +36,7 @@ impl<T, const W: usize, const H: usize, const D: usize> Index<(isize, isize, isi
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        &self.grid[x as usize][y as usize][z as usize]
+        &self.grid[z as usize][y as usize][x as usize]
     }
 }
 
@@ -48,7 +48,7 @@ impl<T, const W: usize, const H: usize, const D: usize> IndexMut<(isize, isize, 
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        &mut self.grid[x as usize][y as usize][z as usize]
+        &mut self.grid[z as usize][y as usize][x as usize]
     }
 }
 
@@ -69,7 +69,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
 
     fn fill_value(val: Self::Atom) -> Self {
         Self {
-            grid: Box::new([[[val; D]; H]; W]),
+            grid: Box::new([[[val; W]; H]; D]),
         }
     }
 
@@ -149,5 +149,15 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         let temp = self[idx_1];
         self[idx_1] = self[idx_2];
         self[idx_2] = temp;
+    }
+}
+
+impl<const W: usize, const H: usize, const D: usize, const N: usize> Array3d<NumAtom<N>, W, H, D> {
+    pub fn get_slice(&self) -> &[u8] {
+        let ptr: *const NumAtom<N> = &self.grid[0][0][0];
+        let len = H * W * std::mem::size_of::<NumAtom<N>>();
+        // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
+        // allways just contains an u8 and is repr(transparent)
+        unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
     }
 }

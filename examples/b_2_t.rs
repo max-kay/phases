@@ -1,7 +1,6 @@
 use std::{fs::File, io::Write};
 
 use chrono::Utc;
-use gif::Frame;
 use phases::{
     anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array2d, System,
 };
@@ -10,9 +9,9 @@ use phases::{
 const N_ATOMS: usize = 2;
 type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
-const WIDTH: usize = 150;
-const HEIGHT: usize = 200;
-const STEPS: usize = WIDTH * HEIGHT * 500;
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
+const STEPS: usize = WIDTH * HEIGHT * 1000;
 
 // temperature
 const START: f32 = 50.0;
@@ -38,7 +37,7 @@ fn main() {
     make_system_file(&name, concentration).unwrap();
 
     let path = format!("out/logs/{}.csv", name);
-    let categories = vec!["temp".to_owned(), "energy".to_owned()];
+    let categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
 
     let (logger, handle) = CsvLogger::new(
         path,
@@ -60,21 +59,20 @@ fn main() {
         system.move_vacancy(1.0 / temp(i));
         if i % (STEPS / LOG_ENTRIES) == 0 {
             logger
-                .send_row(vec![temp(i), system.internal_energy()])
+                .send_row(vec![
+                    i as f32 / (WIDTH * HEIGHT) as f32,
+                    temp(i),
+                    system.internal_energy() / (WIDTH * HEIGHT) as f32,
+                ])
                 .expect("error while sending row");
         }
         if i % (STEPS / FRAMES) == 0 {
+            let frame = system.get_frame();
             encoder
-                .write_frame(&Frame::from_indexed_pixels(
-                    WIDTH as u16,
-                    HEIGHT as u16,
-                    system.as_bytes(),
-                    None,
-                ))
+                .write_frame(&frame)
                 .expect("Error while writing frame!");
         }
     }
-    println!("finshed running model, took: {:?}", start.elapsed());
 
     let mut encoder = prepare_encoder(
         format!("out/gifs/{}_last.gif", name),
@@ -83,12 +81,7 @@ fn main() {
         None,
     );
     encoder
-        .write_frame(&Frame::from_indexed_pixels(
-            WIDTH as u16,
-            HEIGHT as u16,
-            system.as_bytes(),
-            None,
-        ))
+        .write_frame(&system.get_frame())
         .expect("Error while writing frame!");
 
     std::mem::drop(logger);
@@ -106,13 +99,14 @@ fn make_system_file(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
     let energies_dict = get_energies_dict(energies);
-
-    writeln!(file, "energies")?;
-    writeln!(file, "{}", energies_dict)?;
-    writeln!(file, "width, height")?;
-    writeln!(file, "{},{}", WIDTH, HEIGHT)?;
-    writeln!(file, "steps")?;
-    writeln!(file, "{}", STEPS)?;
+    writeln!(file, "{name}")?;
+    writeln!(file, "Energies")?;
+    writeln!(file, "{energies_dict}")?;
+    writeln!(file, "Width, Height")?;
+    writeln!(file, "{WIDTH}, {HEIGHT}")?;
+    writeln!(file, "Steps per Lattice Site")?;
+    writeln!(file, "{}", STEPS as f32 / (WIDTH * HEIGHT) as f32)?;
+    writeln!(file, "Concentration")?;
     writeln!(file, "{:?}", concentration.get_cs())?;
     Ok(())
 }

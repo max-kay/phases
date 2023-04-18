@@ -1,8 +1,9 @@
+use gif::Frame;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, Array2d, CTrait, Lattice, MyRng, NumAtom};
+use crate::{ATrait, Array2d, Array3d, CTrait, Lattice, MyRng, NumAtom};
 
 pub struct System<L: Lattice> {
     bond_energies: fn(L::Atom, L::Atom) -> f32,
@@ -220,7 +221,7 @@ impl<L: Lattice> System<L> {
             let e_1 = self.energies_around(idx);
 
             let delta_e = e_1 - e_0;
-            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()){
+            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
                 self.update_energy(delta_e);
                 self.vacancy = Some(*other_idx);
                 true
@@ -236,11 +237,17 @@ impl<L: Lattice> System<L> {
 }
 
 impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>> {
-    pub fn as_bytes<'a>(&'a self) -> &'a [u8]
-    where
-        &'a Array2d<NumAtom<N>, W, H>: Into<&'a [u8]>,
-    {
+    pub fn get_frame(&self) -> gif::Frame<'_> {
         // the existance of vacancies is purposely ignored
-        (&self.lattice).into()
+        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_slice(), None)
+    }
+}
+
+impl<const N: usize, const W: usize, const H: usize, const D: usize>
+    System<Array3d<NumAtom<N>, W, H, D>>
+{
+    pub fn get_frame(&self) -> gif::Frame<'_> {
+        // the existance of vacancies is purposely ignored
+        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_slice(), None)
     }
 }

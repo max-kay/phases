@@ -1,7 +1,7 @@
 use core::panic;
 use std::ops::Deref;
 
-use crate::{ATrait, Array2d, CTrait};
+use crate::{ATrait, CTrait};
 use rand::{prelude::*, Rng};
 use rand_distr::WeightedIndex;
 
@@ -67,17 +67,6 @@ impl<const N: usize> CTrait for NumC<N> {
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize> From<&Array2d<NumAtom<N>, W, H>> for &[u8] {
-    fn from(value: &Array2d<NumAtom<N>, W, H>) -> Self {
-        let ptr: *const NumAtom<N>  = &value.grid[0][0];
-        let len = H * W * std::mem::size_of::<NumAtom<N>>();
-        // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
-        // allways just contains an u8 and is repr(transparent) 
-        unsafe {
-            std::slice::from_raw_parts(ptr as *const u8, len)
-        }
-    }
-}
 
 pub fn get_energies_dict<const N: usize>(e_func: fn(NumAtom<N>, NumAtom<N>) -> f32) -> String {
     let mut string = "{".to_owned();

@@ -8,10 +8,10 @@ use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
 const N_ATOMS: usize = 2;
 type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
-const WIDTH: usize = 50;
-const HEIGHT: usize = 50;
-const DEPTH: usize = 50;
-const STEPS: usize = WIDTH * HEIGHT * DEPTH * 500;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 64;
+const DEPTH: usize = 64;
+const STEPS: usize = WIDTH * HEIGHT * DEPTH * 1000;
 
 // temperature
 const START: f32 = 50.0;
@@ -28,10 +28,10 @@ fn main() {
 
     let concentration = Concentration::new([1.0, 1.0]);
 
-    let name = format!("b_2_t_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
+    let name = format!("b_3_t_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
     make_system_file(&name, concentration).unwrap();
     let path = format!("out/logs/{}.csv", name);
-    let categories = vec!["temp".to_owned(), "energy".to_owned()];
+    let categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
 
     let (logger, handle) = CsvLogger::new(
         path,
@@ -49,11 +49,14 @@ fn main() {
         system.move_vacancy(1.0 / temp(i));
         if i % (STEPS / LOG_ENTRIES) == 0 {
             logger
-                .send_row(vec![temp(i), system.internal_energy()])
+                .send_row(vec![
+                    i as f32 / (WIDTH * HEIGHT * DEPTH) as f32,
+                    temp(i),
+                    system.internal_energy() / (WIDTH * HEIGHT * DEPTH) as f32,
+                ])
                 .expect("error while sending row");
         }
     }
-    println!("finshed running model, took: {:?}", start.elapsed());
 
     std::mem::drop(logger);
     if let Err(err) = handle.join() {
@@ -70,13 +73,14 @@ fn make_system_file(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
     let energies_dict = get_energies_dict(energies);
-
-    writeln!(file, "energies")?;
+    writeln!(file, "{name}")?;
+    writeln!(file, "Energies")?;
     writeln!(file, "{}", energies_dict)?;
-    writeln!(file, "width, height, depth")?;
+    writeln!(file, "Width, Height, Depth")?;
     writeln!(file, "{},{},{}", WIDTH, HEIGHT, DEPTH)?;
-    writeln!(file, "steps")?;
-    writeln!(file, "{}", STEPS)?;
+    writeln!(file, "Steps per Lattice Site")?;
+    writeln!(file, "{}", STEPS as f32 / (WIDTH * HEIGHT * DEPTH) as f32)?;
+    writeln!(file, "Concentration")?;
     writeln!(file, "{:?}", concentration.get_cs())?;
     Ok(())
 }

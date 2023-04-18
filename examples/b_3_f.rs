@@ -7,9 +7,9 @@ use rayon::prelude::*;
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 4;
-const HEIGHT: usize = 2;
-const DEPTH: usize = 1;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 64;
+const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 
@@ -24,7 +24,7 @@ static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 fn main() {
     let start = std::time::Instant::now();
-    let name = format!("b_2_f_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
+    let name = format!("b_3_f_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
 
     make_system_file(&name).unwrap();
 

@@ -5,7 +5,7 @@ use std::{
 
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng};
+use crate::{ATrait, Lattice, MyRng, NumAtom};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array2d<T, const W: usize, const H: usize> {
@@ -122,5 +122,15 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
         let temp = self[idx_1];
         self[idx_1] = self[idx_2];
         self[idx_2] = temp;
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> Array2d<NumAtom<N>, W, H> {
+    pub fn get_slice(&self) -> &[u8] {
+        let ptr: *const NumAtom<N> = &self.grid[0][0];
+        let len = H * W * std::mem::size_of::<NumAtom<N>>();
+        // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
+        // allways just contains an u8 and is repr(transparent)
+        unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
     }
 }

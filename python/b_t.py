@@ -7,25 +7,32 @@ from sys import argv
 from math import prod
 
 
+def get_title(name: str) -> str:
+    if "b_2_" in name:
+        return "Cooling Curves for a 2D System"
+    if "b_3_" in name:
+        return "Cooling Curves for a 3D System"
+
+
 if len(argv) >= 2:
     name = argv[1]
 else:
-    name = "b_2_t_2023-04-17_10-03"
+    name = "b_2_t_2023-04-18_15-22"
 
 with open(f"out/systems/{name}.txt") as file:
-    lines = file.read_lines()
-    energies = eval(lines[1])
-    sites = prod([int(x) for x in lines[3].split(",")])
+    lines = file.read()
+
 
 df = pd.read_csv(f"out/logs/{name}.csv", dtype=float, header=1)
 
-idxs = np.linspace(0, len(df) / sites, len(df))
-df["energy"] = df["energy"] / sites
+df["energy"] = df["energy"]
 
-fig = plt.figure()
+fig = plt.figure(figsize=(7 * 1.5, 5 * 1.5))
+
+fig.suptitle(get_title(name))
 
 ax = fig.add_subplot(221)
-ax.plot(idxs, df["energy"])
+ax.plot(df["step"], df["energy"])
 ax.set_xlabel("Step")
 ax.set_ylabel("E")
 
@@ -35,10 +42,11 @@ ax.set_xlabel("T")
 ax.set_ylabel("E")
 
 ax = fig.add_subplot(223)
-ax.plot(idxs, df["temp"])
+ax.plot(df["step"], df["temp"])
 ax.set_xlabel("Step")
 ax.set_ylabel("T")
 
-plt.get_current_fig_manager().full_screen_toggle()
+fig.text(0.55, 0.4, f"{lines}", ha='left', va='top', fontsize=9)
 
-plt.show()
+
+plt.savefig(f"out/figs/{name}.png", dpi=300)
