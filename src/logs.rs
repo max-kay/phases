@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Result, Write, BufWriter},
+    io::{BufWriter, Result, Write},
     sync::mpsc::{SendError, Sender},
     thread::JoinHandle,
 };

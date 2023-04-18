@@ -7,9 +7,7 @@ use rand::Rng;
 
 use crate::{ATrait, Lattice, MyRng};
 
-/// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
-/// and directly acceses the underlying array when using usize
-#[derive(Clone)]
+/// A 3D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
     pub grid: Box<[[[T; D]; H]; W]>,
 }

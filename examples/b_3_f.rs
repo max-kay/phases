@@ -13,15 +13,6 @@ const DEPTH: usize = 1;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    match (*a1, *a2) {
-        (0, 0) => -4.0,
-        (1, 1) => -1.0,
-        (0, 1) | (1, 0) => 3.0,
-        _ => panic!(),
-    }
-}
-
 // temp
 const TEMP_STEPS: usize = 200;
 const START_TEMP: f32 = 600.0;
@@ -137,4 +128,8 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "concentration steps")?;
     writeln!(file, "{}", CONCENTRATION_STEPS)?;
     Ok(())
+}
+
+fn energies(a1: Atom, a2: Atom) -> f32 {
+    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }

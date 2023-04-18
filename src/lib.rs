@@ -15,7 +15,7 @@ mod array_3d;
 pub use array_3d::Array3d;
 
 mod atoms;
-pub use atoms::{NumAtom, NumC, get_energies_dict};
+pub use atoms::{get_energies_dict, NumAtom, NumC};
 
 mod system;
 pub use system::System;
