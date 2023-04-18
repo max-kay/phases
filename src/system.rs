@@ -3,11 +3,10 @@ use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, Array2d, Array3d, CTrait, Lattice, MyRng, NumAtom};
+use crate::{ATrait, Array2d, Array3d, Lattice, MyRng, NumAtom};
 
 pub struct System<L: Lattice> {
     bond_energies: fn(L::Atom, L::Atom) -> f32,
-    concentration: <L::Atom as ATrait>::Concentration,
     lattice: L,
     rng: MyRng,
     internal_energy: Option<f32>,
@@ -26,24 +25,17 @@ impl<L: Lattice> System<L> {
             None => MyRng::from_entropy(),
         };
 
-        let (grid, concentration) = match concentration {
-            None => (
-                L::fill_with_fn(&mut |_| L::Atom::uniform(&mut rng)),
-                <L::Atom as ATrait>::Concentration::uniform(),
-            ),
-            Some(concentration) => (
-                L::fill_with_fn(&mut |_| {
-                    <L::Atom as ATrait>::with_concentration(&mut rng, concentration)
-                }),
-                concentration,
-            ),
+        let grid = match concentration {
+            None => L::fill_with_fn(&mut |_| L::Atom::uniform(&mut rng)),
+            Some(concentration) => L::fill_with_fn(&mut |_| {
+                <L::Atom as ATrait>::with_concentration(&mut rng, concentration)
+            }),
         };
 
         let mut obj = Self {
             bond_energies,
             lattice: grid,
             rng,
-            concentration,
             internal_energy: None,
             vacancy: None,
         };
@@ -91,12 +83,6 @@ impl<L: Lattice> System<L> {
                 panic!();
             }
         }
-    }
-}
-
-impl<L: Lattice> System<L> {
-    pub fn get_cs(&self) -> <L::Atom as ATrait>::Concentration {
-        self.concentration
     }
 }
 

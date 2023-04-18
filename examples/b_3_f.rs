@@ -7,8 +7,8 @@ use rayon::prelude::*;
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 64;
-const HEIGHT: usize = 64;
+const WIDTH: usize = 128;
+const HEIGHT: usize = 128;
 const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 30;
@@ -18,7 +18,7 @@ const TEMP_STEPS: usize = 100;
 const START_TEMP: f32 = 150.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 10;
+const CONCENTRATION_STEPS: usize = 30;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 

@@ -56,7 +56,6 @@ pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
 
 pub trait CTrait {
     fn uniform() -> Self;
-    fn max_entropy(&self) -> f32;
 }
 
 pub trait Array<T: Copy>: Copy + IntoIterator<Item = T> + AsRef<[T]> {}

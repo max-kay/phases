@@ -62,11 +62,7 @@ impl<const N: usize> CTrait for NumC<N> {
     fn uniform() -> Self {
         Self::new([1.0; N])
     }
-    fn max_entropy(&self) -> f32 {
-        -(self.cs.iter().fold(0.0, |acc, x| acc + x.ln() * x)) as f32
-    }
 }
-
 
 pub fn get_energies_dict<const N: usize>(e_func: fn(NumAtom<N>, NumAtom<N>) -> f32) -> String {
     let mut string = "{".to_owned();
