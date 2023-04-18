@@ -1,5 +1,4 @@
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs, concat_idents)]
+#![feature(concat_idents)]
 use std::{
     collections::HashMap,
     hash::Hash,

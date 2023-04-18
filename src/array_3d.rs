@@ -10,16 +10,12 @@ use crate::{ATrait, Lattice, MyRng};
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
 #[derive(Clone, Copy)]
-pub struct Array3d<T, const W: usize, const H: usize, const D: usize>
-where
-    [(); W * H * D]:,
-{
-    pub grid: [T; W * H * D],
+pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
+    pub grid: [[[T; D]; H]; W],
 }
 
 impl<T, const W: usize, const H: usize, const D: usize> Array3d<T, W, H, D>
 where
-    [(); W * H * D]:,
     T: Copy,
 {
     pub fn new() -> Self
@@ -27,15 +23,13 @@ where
         T: Default + Clone,
     {
         Self {
-            grid: [T::default(); W * H * D],
+            grid: [[[T::default(); D]; H]; W],
         }
     }
 }
 
 impl<T, const W: usize, const H: usize, const D: usize> Index<(isize, isize, isize)>
     for Array3d<T, W, H, D>
-where
-    [(); W * H * D]:,
 {
     type Output = T;
 
@@ -44,30 +38,24 @@ where
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        self.grid
-            .index(z as usize * D * W + y as usize * W + x as usize)
+        &self.grid[x as usize][y as usize][z as usize]
     }
 }
 
 impl<T, const W: usize, const H: usize, const D: usize> IndexMut<(isize, isize, isize)>
     for Array3d<T, W, H, D>
-where
-    [(); W * H * D]:,
 {
     fn index_mut(&mut self, index: (isize, isize, isize)) -> &mut Self::Output {
         let (x, y, z) = index;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        self.grid
-            .index_mut(z as usize * D * W + y as usize * W + x as usize)
+        &mut self.grid[x as usize][y as usize][z as usize]
     }
 }
 
 impl<T: Default + Copy, const W: usize, const H: usize, const D: usize> Default
     for Array3d<T, W, H, D>
-where
-    [(); W * H * D]:,
 {
     fn default() -> Self {
         Self::new()
@@ -76,8 +64,6 @@ where
 
 impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     for Array3d<T, W, H, D>
-where
-    [(); W * H * D]:,
 {
     type Atom = T;
 
@@ -85,7 +71,7 @@ where
 
     fn fill_value(val: Self::Atom) -> Self {
         Self {
-            grid: [val; W * H * D],
+            grid: [[[val; D]; H]; W],
         }
     }
 

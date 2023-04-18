@@ -1,5 +1,3 @@
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
 use std::{fs::File, io::Write};
 
 use chrono::Utc;
@@ -9,21 +7,12 @@ use phases::{
 };
 
 // model parameters
-const N_ATOMS: u8 = 2;
+const N_ATOMS: usize = 2;
 type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 200;
 const HEIGHT: usize = 200;
 const STEPS: usize = WIDTH * HEIGHT * 5000;
-
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    match (*a1, *a2) {
-        (0, 0) => -4.0,
-        (1, 1) => -1.0,
-        (0, 1) | (1, 0) => 3.0,
-        _ => unreachable!(),
-    }
-}
 
 // temperature
 const START: f32 = 50.0;
@@ -126,4 +115,8 @@ fn make_system_file(
     writeln!(file, "{}", STEPS)?;
     writeln!(file, "{:?}", concentration.get_cs())?;
     Ok(())
+}
+
+fn energies(a1: Atom, a2: Atom) -> f32 {
+    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }

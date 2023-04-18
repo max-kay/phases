@@ -1,6 +1,3 @@
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
-
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
@@ -10,26 +7,17 @@ use rayon::prelude::*;
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 256;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 512;
+const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100;
-
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    match (*a1, *a2) {
-        (0, 0) => -4.0,
-        (1, 1) => -1.0,
-        (0, 1) | (1, 0) => 3.0,
-        _ => panic!(),
-    }
-}
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 200;
 
 // temp
-const TEMP_STEPS: u32 = 200;
-const START_TEMP: f32 = 600.0;
+const TEMP_STEPS: usize = 50;
+const START_TEMP: f32 = 200.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 30;
+const CONCENTRATION_STEPS: usize = 7;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -113,11 +101,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             .unwrap();
 
         let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-        println!(
-            "{} of {}",
-            progress,
-            TEMP_STEPS * CONCENTRATION_STEPS as u32
-        );
+        println!("{} of {}", progress, TEMP_STEPS * CONCENTRATION_STEPS);
     }
     drop(logger)
 }
@@ -143,4 +127,8 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "concentration steps")?;
     writeln!(file, "{}", CONCENTRATION_STEPS)?;
     Ok(())
+}
+
+fn energies(a1: Atom, a2: Atom) -> f32 {
+    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }

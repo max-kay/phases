@@ -1,5 +1,3 @@
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
 use std::{fs::File, io::Write};
 
 use chrono::Utc;
@@ -7,7 +5,7 @@ use chrono::Utc;
 use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
 
 // model parameters
-const N_ATOMS: u8 = 2;
+const N_ATOMS: usize = 2;
 type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 200;

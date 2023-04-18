@@ -234,12 +234,7 @@ impl<L: Lattice> System<L> {
     }
 }
 
-
-impl<const N: u8, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>>
-where
-    [(); W * H]:,
-    [(); N as usize]:,
-{
+impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>> {
     pub fn as_bytes<'a>(&'a self) -> &'a [u8]
     where
         &'a Array2d<NumAtom<N>, W, H>: Into<&'a [u8]>,

@@ -1,6 +1,3 @@
-#![allow(incomplete_features)]
-#![feature(generic_const_exprs)]
-
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
@@ -26,7 +23,7 @@ fn energies(a1: Atom, a2: Atom) -> f32 {
 }
 
 // temp
-const TEMP_STEPS: u32 = 200;
+const TEMP_STEPS: usize = 200;
 const START_TEMP: f32 = 600.0;
 
 // concentration
@@ -114,11 +111,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             .unwrap();
 
         let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-        println!(
-            "{} of {}",
-            progress,
-            TEMP_STEPS * CONCENTRATION_STEPS as u32
-        );
+        println!("{} of {}", progress, TEMP_STEPS * CONCENTRATION_STEPS);
     }
     drop(logger)
 }

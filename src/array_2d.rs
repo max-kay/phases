@@ -10,16 +10,12 @@ use crate::{ATrait, Lattice, MyRng};
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
 #[derive(Clone, Copy)]
-pub struct Array2d<T, const W: usize, const H: usize>
-where
-    [(); W * H]:,
-{
-    pub grid: [T; W * H],
+pub struct Array2d<T, const W: usize, const H: usize> {
+    pub grid: [[T; H]; W],
 }
 
 impl<T, const W: usize, const H: usize> Array2d<T, W, H>
 where
-    [(); W * H]:,
     T: Copy,
 {
     pub fn new() -> Self
@@ -27,56 +23,46 @@ where
         T: Default + Clone,
     {
         Self {
-            grid: [T::default(); W * H],
+            grid: [[T::default(); H]; W],
         }
     }
 }
 
-impl<T, const W: usize, const H: usize> Index<(isize, isize)> for Array2d<T, W, H>
-where
-    [(); W * H]:,
-{
+impl<T, const W: usize, const H: usize> Index<(isize, isize)> for Array2d<T, W, H> {
     type Output = T;
 
     fn index(&self, index: (isize, isize)) -> &Self::Output {
         let (x, y) = index;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
-        self.grid.index(y as usize * W + x as usize)
+        &self.grid[x as usize][y as usize]
     }
 }
 
-impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for Array2d<T, W, H>
-where
-    [(); W * H]:,
-{
+impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for Array2d<T, W, H> {
     fn index_mut(&mut self, index: (isize, isize)) -> &mut Self::Output {
         let (x, y) = index;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
-        self.grid.index_mut(y as usize * W + x as usize)
+        &mut self.grid[x as usize][y as usize]
     }
 }
 
-impl<T: Default + Copy, const W: usize, const H: usize> Default for Array2d<T, W, H>
-where
-    [(); W * H]:,
-{
+impl<T: Default + Copy, const W: usize, const H: usize> Default for Array2d<T, W, H> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W, H>
-where
-    [(); W * H]:,
-{
+impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W, H> {
     type Atom = T;
 
     type Index = (isize, isize);
 
     fn fill_value(val: Self::Atom) -> Self {
-        Self { grid: [val; W * H] }
+        Self {
+            grid: [[val; H]; W],
+        }
     }
 
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self {
