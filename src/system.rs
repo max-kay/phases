@@ -7,7 +7,7 @@ use crate::{ATrait, Array2d, CTrait, Lattice, MyRng, NumAtom};
 pub struct System<L: Lattice> {
     bond_energies: fn(L::Atom, L::Atom) -> f32,
     concentration: <L::Atom as ATrait>::Concentration,
-    storage: L,
+    lattice: L,
     rng: MyRng,
     internal_energy: Option<f32>,
     vacancy: Option<L::Index>,
@@ -40,7 +40,7 @@ impl<L: Lattice> System<L> {
 
         let mut obj = Self {
             bond_energies,
-            storage: grid,
+            lattice: grid,
             rng,
             concentration,
             internal_energy: None,
@@ -60,8 +60,8 @@ impl<L: Lattice> System<L> {
             energy
         } else {
             let energy = self
-                .storage
-                .all_neighbours()
+                .lattice
+                .all_neighbors()
                 .iter()
                 .fold(0.0, |energy, ((a1, a2), count)| {
                     energy + (self.bond_energies)(*a1, *a2) * *count as f32
@@ -73,11 +73,11 @@ impl<L: Lattice> System<L> {
 
     /// This function returns the local energy around the idx if it was swapped to atom_at_idx
     fn energies_around(&self, idx: L::Index) -> f32 {
-        self.storage
-            .all_neighbours_to(idx)
-            .iter()
+        self.lattice
+            .all_neighbors_to(idx)
+            .into_iter()
             .fold(0.0, |energy, idx_i| {
-                energy + (self.bond_energies)(self.storage[idx], self.storage[*idx_i])
+                energy + (self.bond_energies)(self.lattice[idx], self.lattice[idx_i])
             })
     }
 
@@ -105,20 +105,20 @@ impl<L: Lattice> System<L> {
     /// If there is no swap it repeats this process until it succeds.
     pub fn swap_uniform(&mut self) -> bool {
         let (idx_1, idx_2) = loop {
-            let (idx_1, idx_2) = self.storage.choose_idxs_uniformly(&mut self.rng);
-            if self.storage[idx_1] != self.storage[idx_2] {
+            let (idx_1, idx_2) = self.lattice.choose_idxs_uniformly(&mut self.rng);
+            if self.lattice[idx_1] != self.lattice[idx_2] {
                 break (idx_1, idx_2);
             }
         };
         let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.storage.swap_idxs(idx_1, idx_2);
+        self.lattice.swap_idxs(idx_1, idx_2);
         let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
         let delta_e = e_1 - e_0;
         if delta_e <= 0.0 {
             self.update_energy(delta_e);
             true
         } else {
-            self.storage.swap_idxs(idx_1, idx_2);
+            self.lattice.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -132,21 +132,21 @@ impl<L: Lattice> System<L> {
     {
         let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self
-                .storage
+                .lattice
                 .choose_idxs_with_distribution(&mut self.rng, distr);
-            if self.storage[idx_1] != self.storage[idx_2] {
+            if self.lattice[idx_1] != self.lattice[idx_2] {
                 break (idx_1, idx_2);
             }
         };
         let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.storage.swap_idxs(idx_1, idx_2);
+        self.lattice.swap_idxs(idx_1, idx_2);
         let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
         let delta_e = e_1 - e_0;
         if delta_e <= 0.0 {
             self.update_energy(delta_e);
             true
         } else {
-            self.storage.swap_idxs(idx_1, idx_2);
+            self.lattice.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -154,20 +154,20 @@ impl<L: Lattice> System<L> {
     /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
     pub fn monte_carlo_swap(&mut self, beta: f32) -> bool {
         let (idx_1, idx_2) = loop {
-            let (idx_1, idx_2) = self.storage.choose_idxs_uniformly(&mut self.rng);
-            if self.storage[idx_1] != self.storage[idx_2] {
+            let (idx_1, idx_2) = self.lattice.choose_idxs_uniformly(&mut self.rng);
+            if self.lattice[idx_1] != self.lattice[idx_2] {
                 break (idx_1, idx_2);
             }
         };
         let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.storage.swap_idxs(idx_1, idx_2);
+        self.lattice.swap_idxs(idx_1, idx_2);
         let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
         let delta_e = e_1 - e_0;
         if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
             self.update_energy(delta_e);
             true
         } else {
-            self.storage.swap_idxs(idx_1, idx_2);
+            self.lattice.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -180,21 +180,21 @@ impl<L: Lattice> System<L> {
     {
         let (idx_1, idx_2) = loop {
             let (idx_1, idx_2) = self
-                .storage
+                .lattice
                 .choose_idxs_with_distribution(&mut self.rng, distr);
-            if self.storage[idx_1] != self.storage[idx_2] {
+            if self.lattice[idx_1] != self.lattice[idx_2] {
                 break (idx_1, idx_2);
             }
         };
         let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.storage.swap_idxs(idx_1, idx_2);
+        self.lattice.swap_idxs(idx_1, idx_2);
         let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
         let delta_e = e_1 - e_0;
         if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
             self.update_energy(delta_e);
             true
         } else {
-            self.storage.swap_idxs(idx_1, idx_2);
+            self.lattice.swap_idxs(idx_1, idx_2);
             false
         }
     }
@@ -204,31 +204,32 @@ impl<L: Lattice> System<L> {
         // it just reinterprets this spot as being empty thus having bond energies = 0
 
         if let Some(idx) = self.vacancy {
-            let all_neighbours_to = self.storage.all_neighbours_to(idx);
-            let other_idx = all_neighbours_to
+            let all_neighbors_to = self.lattice.all_neighbors_to(idx);
+            let other_idx = all_neighbors_to
+                .as_ref()
                 .choose(&mut self.rng)
-                .expect("all atoms have neighbours");
+                .expect("all atoms have neighbors");
 
             // This is correct because this model assumes there is no interaction between
-            // a neighbouring atom and a vacancy
+            // a neighboring atom and a vacancy
             // The value in the grid where the atom sits leads to an over counting
             // of the energy between index 1 and 2
             // but this doesnt matter because it is in e_0 and e_1 and thus subtrackted out
             let e_0 = self.energies_around(*other_idx);
-            self.storage.swap_idxs(idx, *other_idx);
+            self.lattice.swap_idxs(idx, *other_idx);
             let e_1 = self.energies_around(idx);
 
             let delta_e = e_1 - e_0;
-            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
+            if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()){
                 self.update_energy(delta_e);
                 self.vacancy = Some(*other_idx);
                 true
             } else {
-                self.storage.swap_idxs(idx, *other_idx);
+                self.lattice.swap_idxs(idx, *other_idx);
                 false
             }
         } else {
-            self.vacancy = Some(self.storage.random_idx(&mut self.rng));
+            self.vacancy = Some(self.lattice.random_idx(&mut self.rng));
             self.move_vacancy(beta)
         }
     }
@@ -240,6 +241,6 @@ impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, 
         &'a Array2d<NumAtom<N>, W, H>: Into<&'a [u8]>,
     {
         // the existance of vacancies is purposely ignored
-        (&self.storage).into()
+        (&self.lattice).into()
     }
 }

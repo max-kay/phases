@@ -10,9 +10,9 @@ use phases::{
 const N_ATOMS: usize = 2;
 type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
-const WIDTH: usize = 200;
+const WIDTH: usize = 150;
 const HEIGHT: usize = 200;
-const STEPS: usize = WIDTH * HEIGHT * 5000;
+const STEPS: usize = WIDTH * HEIGHT * 500;
 
 // temperature
 const START: f32 = 50.0;
@@ -117,6 +117,7 @@ fn make_system_file(
     Ok(())
 }
 
+#[inline(always)]
 fn energies(a1: Atom, a2: Atom) -> f32 {
     [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }

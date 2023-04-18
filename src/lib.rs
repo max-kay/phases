@@ -2,7 +2,7 @@
 use std::{
     collections::HashMap,
     hash::Hash,
-    ops::{Index, IndexMut},
+    ops::{Index, IndexMut, Deref},
     process::Command,
 };
 
@@ -28,11 +28,12 @@ type MyRng = Pcg64;
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + ATrait;
     type Index: Copy;
+    type Neighbors: Array<Self::Index>;
     fn fill_value(val: Self::Atom) -> Self;
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self;
 
-    fn all_neighbours(&self) -> HashMap<(Self::Atom, Self::Atom), u32>;
-    fn all_neighbours_to(&self, idx: Self::Index) -> Vec<Self::Index>;
+    fn all_neighbors(&self) -> HashMap<(Self::Atom, Self::Atom), u32>;
+    fn all_neighbors_to(&self, idx: Self::Index) -> Self::Neighbors;
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index;
     fn choose_idxs_uniformly(&self, rng: &mut MyRng) -> (Self::Index, Self::Index) {
@@ -47,7 +48,7 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
 }
 
-pub trait ATrait: Default + Eq + PartialEq + Hash {
+pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
     type Concentration: Copy + CTrait;
     fn uniform(rng: &mut MyRng) -> Self;
     fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
@@ -57,6 +58,10 @@ pub trait CTrait {
     fn uniform() -> Self;
     fn max_entropy(&self) -> f32;
 }
+
+pub trait Array<T: Copy>: Copy + IntoIterator<Item = T> + AsRef<[T]> {}
+
+impl<const N: usize, T: Copy> Array<T> for [T; N] {}
 
 pub fn run_python(script: &str, arg: &str) {
     match Command::new("/opt/homebrew/Caskroom/miniconda/base/envs/datasc/bin/python")

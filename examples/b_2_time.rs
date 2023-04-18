@@ -26,6 +26,7 @@ fn main() {
     println!("finshed running model, took: {:?}", start.elapsed());
 }
 
+#[inline(always)]
 fn energies(a1: Atom, a2: Atom) -> f32 {
     [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }

@@ -64,8 +64,8 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     for Array3d<T, W, H, D>
 {
     type Atom = T;
-
     type Index = (isize, isize, isize);
+    type Neighbors = [Self::Index; 6];
 
     fn fill_value(val: Self::Atom) -> Self {
         Self {
@@ -85,7 +85,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         out
     }
 
-    fn all_neighbours(&self) -> HashMap<(Self::Atom, Self::Atom), u32> {
+    fn all_neighbors(&self) -> HashMap<(Self::Atom, Self::Atom), u32> {
         let mut out = HashMap::new();
         for x in 0..W as isize {
             for y in 0..H as isize {
@@ -105,8 +105,8 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         out
     }
 
-    fn all_neighbours_to(&self, idx: Self::Index) -> Vec<Self::Index> {
-        vec![
+    fn all_neighbors_to(&self, idx: Self::Index) -> Self::Neighbors {
+        [
             (idx.0 + 1, idx.1, idx.2),
             (idx.0 - 1, idx.1, idx.2),
             (idx.0, idx.1 + 1, idx.2),

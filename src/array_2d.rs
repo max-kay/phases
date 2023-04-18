@@ -9,7 +9,7 @@ use crate::{ATrait, Lattice, MyRng};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array2d<T, const W: usize, const H: usize> {
-    pub grid: Box<[[T; H]; W]>,
+    pub grid: Box<[[T; W]; H]>,
 }
 
 impl<T, const W: usize, const H: usize> Array2d<T, W, H>
@@ -21,7 +21,7 @@ where
         T: Default + Clone,
     {
         Self {
-            grid: Box::new([[T::default(); H]; W]),
+            grid: Box::new([[T::default(); W]; H]),
         }
     }
 }
@@ -33,7 +33,7 @@ impl<T, const W: usize, const H: usize> Index<(isize, isize)> for Array2d<T, W, 
         let (x, y) = index;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
-        &self.grid[x as usize][y as usize]
+        &self.grid[y as usize][x as usize]
     }
 }
 
@@ -42,7 +42,7 @@ impl<T, const W: usize, const H: usize> IndexMut<(isize, isize)> for Array2d<T, 
         let (x, y) = index;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
-        &mut self.grid[x as usize][y as usize]
+        &mut self.grid[y as usize][x as usize]
     }
 }
 
@@ -54,12 +54,12 @@ impl<T: Default + Copy, const W: usize, const H: usize> Default for Array2d<T, W
 
 impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W, H> {
     type Atom = T;
-
     type Index = (isize, isize);
+    type Neighbors = [Self::Index; 4];
 
     fn fill_value(val: Self::Atom) -> Self {
         Self {
-            grid: Box::new([[val; H]; W]),
+            grid: Box::new([[val; W]; H]),
         }
     }
 
@@ -73,7 +73,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
         out
     }
 
-    fn all_neighbours(&self) -> HashMap<(Self::Atom, Self::Atom), u32> {
+    fn all_neighbors(&self) -> HashMap<(Self::Atom, Self::Atom), u32> {
         let mut out = HashMap::new();
         for x in 0..W as isize {
             for y in 0..H as isize {
@@ -88,13 +88,17 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
         out
     }
 
-    fn all_neighbours_to(&self, idx: Self::Index) -> Vec<Self::Index> {
-        vec![
+    fn all_neighbors_to(&self, idx: Self::Index) -> Self::Neighbors {
+        [
             (idx.0 + 1, idx.1),
             (idx.0 - 1, idx.1),
             (idx.0, idx.1 + 1),
             (idx.0, idx.1 - 1),
         ]
+    }
+
+    fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
+        (rng.gen_range(0..W as isize), rng.gen_range(0..H as isize))
     }
 
     fn choose_idxs_with_distribution(
@@ -105,10 +109,6 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
         let idx_1 = self.random_idx(rng);
         let offset = distr.sample(rng);
         (idx_1, (idx_1.0 + offset.0, idx_1.1 + offset.1))
-    }
-
-    fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
-        (rng.gen_range(0..W as isize), rng.gen_range(0..H as isize))
     }
 
     fn reduce_index(&self, idx: Self::Index) -> Self::Index {

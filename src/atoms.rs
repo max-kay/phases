@@ -69,10 +69,12 @@ impl<const N: usize> CTrait for NumC<N> {
 
 impl<const W: usize, const H: usize, const N: usize> From<&Array2d<NumAtom<N>, W, H>> for &[u8] {
     fn from(value: &Array2d<NumAtom<N>, W, H>) -> Self {
+        let ptr: *const NumAtom<N>  = &value.grid[0][0];
+        let len = H * W * std::mem::size_of::<NumAtom<N>>();
+        // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
+        // allways just contains an u8 and is repr(transparent) 
         unsafe {
-            let ptr = value.grid.as_ptr() as *const u8;
-            let len = N * W * std::mem::size_of::<NumAtom<N>>();
-            std::slice::from_raw_parts(ptr, len)
+            std::slice::from_raw_parts(ptr as *const u8, len)
         }
     }
 }

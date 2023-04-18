@@ -81,6 +81,7 @@ fn make_system_file(
     Ok(())
 }
 
+#[inline(always)]
 fn energies(a1: Atom, a2: Atom) -> f32 {
     [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
 }
