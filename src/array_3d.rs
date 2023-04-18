@@ -9,9 +9,9 @@ use crate::{ATrait, Lattice, MyRng};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around" if they're isize
 /// and directly acceses the underlying array when using usize
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
-    pub grid: [[[T; D]; H]; W],
+    pub grid: Box<[[[T; D]; H]; W]>,
 }
 
 impl<T, const W: usize, const H: usize, const D: usize> Array3d<T, W, H, D>
@@ -23,7 +23,7 @@ where
         T: Default + Clone,
     {
         Self {
-            grid: [[[T::default(); D]; H]; W],
+            grid: Box::new([[[T::default(); D]; H]; W]),
         }
     }
 }
@@ -71,7 +71,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
 
     fn fill_value(val: Self::Atom) -> Self {
         Self {
-            grid: [[[val; D]; H]; W],
+            grid: Box::new([[[val; D]; H]; W]),
         }
     }
 

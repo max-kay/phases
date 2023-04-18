@@ -11,7 +11,7 @@ type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 200;
 const HEIGHT: usize = 200;
 const DEPTH: usize = 200;
-const STEPS: usize = WIDTH * HEIGHT * DEPTH * 5000;
+const STEPS: usize = WIDTH * HEIGHT * DEPTH * 500;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
