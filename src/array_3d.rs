@@ -154,10 +154,12 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
 
 impl<const W: usize, const H: usize, const D: usize, const N: usize> Array3d<NumAtom<N>, W, H, D> {
     pub fn get_slice(&self) -> &[u8] {
-        let ptr: *const NumAtom<N> = &self.grid[0][0][0];
+        let slice = &self.grid[0]; // <=====| seems to need this borrow why? TODO
+        let ptr: *const NumAtom<N> = &slice[0][0];
         let len = H * W * std::mem::size_of::<NumAtom<N>>();
         // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
-        // allways just contains an u8 and is repr(transparent)
+        // always just contains an u8 and is repr(transparent)
+        // and since we have &self there is nothing mutating the array
         unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
     }
 }

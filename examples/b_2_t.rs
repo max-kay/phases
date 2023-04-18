@@ -73,6 +73,11 @@ fn main() {
                 .expect("Error while writing frame!");
         }
     }
+    
+        std::mem::drop(logger);
+        if let Err(err) = handle.join() {
+            eprintln!("an error occurred while logging: {:?}", err)
+        };
 
     let mut encoder = prepare_encoder(
         format!("out/gifs/{}_last.gif", name),
@@ -83,11 +88,7 @@ fn main() {
     encoder
         .write_frame(&system.get_frame())
         .expect("Error while writing frame!");
-
-    std::mem::drop(logger);
-    if let Err(err) = handle.join() {
-        eprintln!("an error occurred while logging: {:?}", err)
-    };
+    
     println!("took {:?}", start.elapsed());
 
     run_python("python/b_t.py", &name)

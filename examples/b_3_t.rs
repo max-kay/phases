@@ -2,7 +2,9 @@ use std::{fs::File, io::Write};
 
 use chrono::Utc;
 
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
+use phases::{
+    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array3d, System,
+};
 
 // model parameters
 const N_ATOMS: usize = 2;
@@ -14,11 +16,15 @@ const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 1000;
 
 // temperature
-const START: f32 = 50.0;
+const START: f32 = 800.0;
 const END: f32 = 0.01;
 fn temp(i: usize) -> f32 {
     START * ((END / START).ln() / STEPS as f32 * i as f32).exp()
 }
+
+// gif
+const FRAMES: usize = 60;
+const LENGTH: usize = 2000; // in ms
 
 // logs
 const LOG_ENTRIES: usize = 1000;
@@ -39,6 +45,13 @@ fn main() {
         categories,
     );
 
+    let mut encoder = prepare_encoder(
+        format!("out/gifs/{}.gif", name),
+        WIDTH as u16,
+        HEIGHT as u16,
+        Some((LENGTH / FRAMES) as u16),
+    );
+
     let mut system = System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>>::new(
         energies,
         Some("my_seed"),
@@ -56,12 +69,29 @@ fn main() {
                 ])
                 .expect("error while sending row");
         }
+        if i % (STEPS / FRAMES) == 0 {
+            let frame = system.get_frame();
+            encoder
+                .write_frame(&frame)
+                .expect("Error while writing frame!");
+        }
     }
 
     std::mem::drop(logger);
     if let Err(err) = handle.join() {
         eprintln!("an error occurred while logging: {:?}", err)
     };
+
+    let mut encoder = prepare_encoder(
+        format!("out/gifs/{}_last.gif", name),
+        WIDTH as u16,
+        HEIGHT as u16,
+        None,
+    );
+    encoder
+        .write_frame(&system.get_frame())
+        .expect("Error while writing frame!");
+
     println!("took {:?}", start.elapsed());
 
     run_python("python/b_t.py", &name)

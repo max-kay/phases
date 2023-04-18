@@ -11,14 +11,14 @@ const WIDTH: usize = 64;
 const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 30;
 
 // temp
-const TEMP_STEPS: usize = 200;
-const START_TEMP: f32 = 600.0;
+const TEMP_STEPS: usize = 100;
+const START_TEMP: f32 = 150.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 30;
+const CONCENTRATION_STEPS: usize = 10;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
