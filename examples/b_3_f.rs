@@ -4,16 +4,17 @@
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array2d, System};
+use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
 use rayon::prelude::*;
 
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 256;
-const HEIGHT: usize = 256;
-const STEPS: usize = WIDTH * HEIGHT * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100;
+const WIDTH: usize = 4;
+const HEIGHT: usize = 2;
+const DEPTH: usize = 1;
+const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
@@ -79,7 +80,7 @@ fn main() {
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut lattice =
-        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
+        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
@@ -100,8 +101,8 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             .map(|e| (*e - avg_energy).powi(2))
             .sum::<f32>()
             / int_energies.len() as f32;
-        let avg_energy = avg_energy / (WIDTH * HEIGHT) as f32;
-        let variance = variance / (WIDTH * HEIGHT) as f32 / (WIDTH * HEIGHT) as f32;
+        let avg_energy = avg_energy / (WIDTH * HEIGHT * DEPTH) as f32;
+        let variance = variance / (WIDTH * HEIGHT * DEPTH) as f32 / (WIDTH * HEIGHT * DEPTH) as f32;
 
         logger
             .send_row(vec![
@@ -129,14 +130,14 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "{}", name)?;
     writeln!(file, "energies:")?;
     writeln!(file, "{}", energies_dict)?;
-    writeln!(file, "width, height")?;
-    writeln!(file, "{}, {}", WIDTH, HEIGHT)?;
+    writeln!(file, "width, height, depth")?;
+    writeln!(file, "{},{},{}", WIDTH, HEIGHT, DEPTH)?;
     writeln!(file, "steps_per_site: for equilibrium, for measurement")?;
     writeln!(
         file,
         "{},{}",
-        EQUILIBRIUM_STEPS / WIDTH / HEIGHT,
-        STEPS / WIDTH / HEIGHT
+        EQUILIBRIUM_STEPS / WIDTH / HEIGHT / DEPTH,
+        STEPS / WIDTH / HEIGHT / DEPTH
     )?;
     writeln!(file, "start temp, temp steps")?;
     writeln!(file, "{}, {}", START_TEMP, TEMP_STEPS)?;

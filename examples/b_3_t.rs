@@ -3,10 +3,8 @@
 use std::{fs::File, io::Write};
 
 use chrono::Utc;
-use gif::Frame;
-use phases::{
-    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array2d, System,
-};
+
+use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
 
 // model parameters
 const N_ATOMS: u8 = 2;
@@ -14,7 +12,8 @@ type Atom = phases::NumAtom<N_ATOMS>;
 type Concentration = phases::NumC<N_ATOMS>;
 const WIDTH: usize = 200;
 const HEIGHT: usize = 200;
-const STEPS: usize = WIDTH * HEIGHT * 5000;
+const DEPTH: usize = 200;
+const STEPS: usize = WIDTH * HEIGHT * DEPTH * 5000;
 
 fn energies(a1: Atom, a2: Atom) -> f32 {
     match (*a1, *a2) {
@@ -32,10 +31,6 @@ fn temp(i: usize) -> f32 {
     START * ((END / START).ln() / STEPS as f32 * i as f32).exp()
 }
 
-// gif
-const FRAMES: usize = 60;
-const LENGTH: usize = 2000; // in ms
-
 // logs
 const LOG_ENTRIES: usize = 1000;
 
@@ -45,9 +40,7 @@ fn main() {
     let concentration = Concentration::new([1.0, 1.0]);
 
     let name = format!("b_2_t_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
-
     make_system_file(&name, concentration).unwrap();
-
     let path = format!("out/logs/{}.csv", name);
     let categories = vec!["temp".to_owned(), "energy".to_owned()];
 
@@ -57,15 +50,11 @@ fn main() {
         categories,
     );
 
-    let mut encoder = prepare_encoder(
-        format!("out/gifs/{}.gif", name),
-        WIDTH as u16,
-        HEIGHT as u16,
-        Some((LENGTH / FRAMES) as u16),
+    let mut system = System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>>::new(
+        energies,
+        Some("my_seed"),
+        Some(concentration),
     );
-
-    let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, Some("my_seed"), Some(concentration));
 
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
@@ -74,33 +63,8 @@ fn main() {
                 .send_row(vec![temp(i), system.internal_energy()])
                 .expect("error while sending row");
         }
-        if i % (STEPS / FRAMES) == 0 {
-            encoder
-                .write_frame(&Frame::from_indexed_pixels(
-                    WIDTH as u16,
-                    HEIGHT as u16,
-                    system.as_bytes(),
-                    None,
-                ))
-                .expect("Error while writing frame!");
-        }
     }
     println!("finshed running model, took: {:?}", start.elapsed());
-
-    let mut encoder = prepare_encoder(
-        format!("out/gifs/{}_last.gif", name),
-        WIDTH as u16,
-        HEIGHT as u16,
-        None,
-    );
-    encoder
-        .write_frame(&Frame::from_indexed_pixels(
-            WIDTH as u16,
-            HEIGHT as u16,
-            system.as_bytes(),
-            None,
-        ))
-        .expect("Error while writing frame!");
 
     std::mem::drop(logger);
     if let Err(err) = handle.join() {
@@ -120,8 +84,8 @@ fn make_system_file(
 
     writeln!(file, "energies")?;
     writeln!(file, "{}", energies_dict)?;
-    writeln!(file, "width, height")?;
-    writeln!(file, "{},{}", WIDTH, HEIGHT)?;
+    writeln!(file, "width, height, depth")?;
+    writeln!(file, "{},{},{}", WIDTH, HEIGHT, DEPTH)?;
     writeln!(file, "steps")?;
     writeln!(file, "{}", STEPS)?;
     writeln!(file, "{:?}", concentration.get_cs())?;
