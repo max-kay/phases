@@ -9,9 +9,11 @@ import data
 if len(argv) == 2:
     name = argv[1]
 else:
-    name = "b_2_f_2023-04-17_14-10"
+    name = "b_2_f_2023-04-17_14-21"
 
 df = data.prepare_data(f"out/logs/{name}.csv")
+
+df = df[df["temp"] < 100]
 
 fig = plt.figure()
 

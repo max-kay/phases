@@ -7,11 +7,11 @@ use rayon::prelude::*;
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 128;
-const HEIGHT: usize = 128;
+const WIDTH: usize = 64;
+const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 30;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 60;
 
 // temp
 const TEMP_STEPS: usize = 100;
@@ -131,6 +131,9 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[inline(always)]
+#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
+    [1.0, -1.0,
+     -1.0, 0.8]
+    [(*a1 * 2 + *a2) as usize]
 }

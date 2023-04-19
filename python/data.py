@@ -45,14 +45,6 @@ def add_chemical_potential(df: pd.DataFrame):
 
     df.groupby("temp").apply(fn)
 
-def add_other_heat_capacity(df: pd.DataFrame):
-    df["other heat capacity"] = np.nan
-
-    def fn(group):
-        heat_capacity = np.gradient(group["energy"], group["temp"])
-        df.loc[group.index, "other heat capacity"] = heat_capacity
-
-    df.groupby("c").apply(fn)
 
 def plot_grid_3d(xs, ys, zs, ax_3d, cmap=cm.coolwarm):
     n_xs = len(xs.unique())

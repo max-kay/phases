@@ -27,6 +27,9 @@ fn main() {
 }
 
 #[inline(always)]
+#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
+    [-4.0, 3.0,
+     3.0, -1.0]
+    [(*a1 * 2 + *a2) as usize]
 }

@@ -32,7 +32,7 @@ fn main() {
         .rev()
         .collect();
     let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
-        .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.8 + 0.1)
+        .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.92 + 0.04)
         .collect();
 
     let (logger, handle) = CsvLogger::new(
@@ -130,6 +130,9 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[inline(always)]
+#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
+    [-4.0, 3.0,
+     3.0, -1.0]
+    [(*a1 * 2 + *a2) as usize]
 }

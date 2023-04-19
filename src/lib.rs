@@ -2,7 +2,7 @@
 use std::{
     collections::HashMap,
     hash::Hash,
-    ops::{Index, IndexMut, Deref},
+    ops::{Deref, Index, IndexMut},
     process::Command,
 };
 

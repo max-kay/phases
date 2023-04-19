@@ -16,7 +16,7 @@ const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 1000;
 
 // temperature
-const START: f32 = 800.0;
+const START: f32 = 150.0;
 const END: f32 = 0.01;
 fn temp(i: usize) -> f32 {
     START * ((END / START).ln() / STEPS as f32 * i as f32).exp()
@@ -116,6 +116,9 @@ fn make_system_file(
 }
 
 #[inline(always)]
+#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
+    [1.0, -1.0,
+     -1.0, 0.8]
+    [(*a1 * 2 + *a2) as usize]
 }

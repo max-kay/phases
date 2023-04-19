@@ -73,11 +73,11 @@ fn main() {
                 .expect("Error while writing frame!");
         }
     }
-    
-        std::mem::drop(logger);
-        if let Err(err) = handle.join() {
-            eprintln!("an error occurred while logging: {:?}", err)
-        };
+
+    std::mem::drop(logger);
+    if let Err(err) = handle.join() {
+        eprintln!("an error occurred while logging: {:?}", err)
+    };
 
     let mut encoder = prepare_encoder(
         format!("out/gifs/{}_last.gif", name),
@@ -88,7 +88,7 @@ fn main() {
     encoder
         .write_frame(&system.get_frame())
         .expect("Error while writing frame!");
-    
+
     println!("took {:?}", start.elapsed());
 
     run_python("python/b_t.py", &name)
@@ -113,6 +113,9 @@ fn make_system_file(
 }
 
 #[inline(always)]
+#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0, 3.0, -1.0][(*a1 * 2 + *a2) as usize]
+    [-4.0, 3.0,
+     3.0, -1.0]
+    [(*a1 * 2 + *a2) as usize]
 }
