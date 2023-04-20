@@ -48,6 +48,10 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
 }
 
+pub trait RegionCounter: Lattice {
+    fn count_regions(&self) -> HashMap<Self::Atom, HashMap<Self::Atom, u32>>;
+}
+
 pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
     type Concentration: Copy + CTrait;
     fn uniform(rng: &mut MyRng) -> Self;

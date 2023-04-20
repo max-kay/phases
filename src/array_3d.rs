@@ -5,7 +5,7 @@ use std::{
 
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng, NumAtom};
+use crate::{ATrait, Lattice, MyRng, NumAtom, RegionCounter};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
@@ -36,7 +36,13 @@ impl<T, const W: usize, const H: usize, const D: usize> Index<(isize, isize, isi
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        &self.grid[z as usize][y as usize][x as usize]
+        // Safety this is safe because of the above rem
+        unsafe {
+            (*self.grid)
+                .get_unchecked(z as usize)
+                .get_unchecked(y as usize)
+                .get_unchecked(x as usize)
+        }
     }
 }
 
@@ -48,7 +54,13 @@ impl<T, const W: usize, const H: usize, const D: usize> IndexMut<(isize, isize, 
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
-        &mut self.grid[z as usize][y as usize][x as usize]
+        // Safety this is safe because of the above rem
+        unsafe {
+            (*self.grid)
+                .get_unchecked_mut(z as usize)
+                .get_unchecked_mut(y as usize)
+                .get_unchecked_mut(x as usize)
+        }
     }
 }
 
@@ -149,6 +161,14 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         let temp = self[idx_1];
         self[idx_1] = self[idx_2];
         self[idx_2] = temp;
+    }
+}
+
+impl<const W: usize, const H: usize, const D: usize, const N: usize> RegionCounter
+    for Array3d<NumAtom<N>, W, H, D>
+{
+    fn count_regions(&self) -> HashMap<Self::Atom, HashMap<Self::Atom, u32>> {
+        todo!()
     }
 }
 

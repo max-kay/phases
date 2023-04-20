@@ -27,9 +27,8 @@ fn main() {
 }
 
 #[inline(always)]
-#[rustfmt::skip]
 fn energies(a1: Atom, a2: Atom) -> f32 {
-    [-4.0, 3.0,
-     3.0, -1.0]
-    [(*a1 * 2 + *a2) as usize]
+    // Safety: this is safe because NumAtom<2> can only be 0 or 1
+    // and thus the shift is equal to multiplying by 2
+    unsafe { *[-4.0, 3.0, 3.0, -1.0].get_unchecked(((*a1 << 1) + *a2) as usize) }
 }
