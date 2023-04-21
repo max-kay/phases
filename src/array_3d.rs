@@ -5,7 +5,7 @@ use std::{
 
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng, NumAtom, RegionCounter};
+use crate::{ATrait, Lattice, MyRng, NumAtom};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
@@ -128,6 +128,26 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         ]
     }
 
+    fn all_idx(&self) -> Vec<Self::Index> {
+        todo!()
+    }
+
+    fn all_items(&self) -> Vec<&Self::Atom> {
+        todo!()
+    }
+
+    fn all_items_mut(&mut self) -> Vec<&mut Self::Atom> {
+        todo!()
+    }
+
+    fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
+        (
+            rng.gen_range(0..W as isize),
+            rng.gen_range(0..H as isize),
+            rng.gen_range(0..D as isize),
+        )
+    }
+
     fn choose_idxs_with_distribution(
         &self,
         rng: &mut crate::MyRng,
@@ -138,14 +158,6 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         (
             idx_1,
             (idx_1.0 + offset.0, idx_1.1 + offset.1, idx_1.2 + offset.2),
-        )
-    }
-
-    fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
-        (
-            rng.gen_range(0..W as isize),
-            rng.gen_range(0..H as isize),
-            rng.gen_range(0..D as isize),
         )
     }
 
@@ -161,14 +173,6 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         let temp = self[idx_1];
         self[idx_1] = self[idx_2];
         self[idx_2] = temp;
-    }
-}
-
-impl<const W: usize, const H: usize, const D: usize, const N: usize> RegionCounter
-    for Array3d<NumAtom<N>, W, H, D>
-{
-    fn count_regions(&self) -> HashMap<Self::Atom, HashMap<Self::Atom, u32>> {
-        todo!()
     }
 }
 

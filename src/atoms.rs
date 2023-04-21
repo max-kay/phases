@@ -1,13 +1,32 @@
 use core::panic;
-use std::ops::Deref;
+use std::{ops::Deref, usize};
 
-use crate::{ATrait, CTrait};
+use crate::{ATrait, CTrait, Mark};
 use rand::{prelude::*, Rng};
 use rand_distr::WeightedIndex;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct NumAtom<const N: usize>(u8);
+
+// TODO: make a test if N is smaller that u8::MAX/2
+impl<const N: usize> Mark for NumAtom<N> {
+    /// # Safety
+    /// the implementation of this function plays with bits and thus does not garantee
+    /// that the value is < N
+    /// values have to be unmarked after use
+    unsafe fn mark(&mut self) {
+        self.0 |= 0b1000_0000
+    }
+
+    fn unmark(&mut self) {
+        self.0 &= 0b0111_1111
+    }
+
+    fn is_marked(&self) -> bool {
+        self.0 & 0b1000_0000 != 0
+    }
+}
 
 impl<const N: usize> Deref for NumAtom<N> {
     type Target = u8;

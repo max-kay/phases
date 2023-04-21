@@ -5,7 +5,7 @@ use std::{
 
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng, NumAtom, RegionCounter};
+use crate::{ATrait, Lattice, MyRng, NumAtom};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array2d<T, const W: usize, const H: usize> {
@@ -107,6 +107,18 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
         ]
     }
 
+    fn all_idx(&self) -> Vec<Self::Index> {
+        todo!()
+    }
+
+    fn all_items(&self) -> Vec<&Self::Atom> {
+        todo!()
+    }
+
+    fn all_items_mut(&mut self) -> Vec<&mut Self::Atom> {
+        todo!()
+    }
+
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
         (rng.gen_range(0..W as isize), rng.gen_range(0..H as isize))
     }
@@ -135,13 +147,6 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize> RegionCounter for Array2d<NumAtom<N>, W, H> {
-    fn count_regions(&self) -> HashMap<Self::Atom, HashMap<Self::Atom, u32>> {
-        todo!()
-    }
-}
-
-// Box<[[T; W]; H]>
 impl<const W: usize, const H: usize, const N: usize> Array2d<NumAtom<N>, W, H> {
     pub fn get_slice(&self) -> &[u8] {
         let ptr: *const NumAtom<N> = &self.grid[0][0];

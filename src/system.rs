@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use gif::Frame;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, Array2d, Array3d, Lattice, MyRng, NumAtom};
+use crate::{ATrait, Array2d, Array3d, Lattice, MyRng, NumAtom, RegionCounter, Stats};
 
 pub struct System<L: Lattice> {
     bond_energies: fn(L::Atom, L::Atom) -> f32,
@@ -219,6 +221,12 @@ impl<L: Lattice> System<L> {
             self.vacancy = Some(self.lattice.random_idx(&mut self.rng));
             self.move_vacancy(beta)
         }
+    }
+}
+
+impl<S: RegionCounter> System<S> {
+    pub fn get_region_stats(&mut self) -> HashMap<<S as Lattice>::Atom, Stats> {
+        Stats::gen_stats(self.lattice.count_regions())
     }
 }
 
