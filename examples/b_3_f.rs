@@ -67,19 +67,19 @@ fn main() {
 }
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
-    let mut lattice =
+    let mut system =
         System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>>::new(energies, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
         for _ in 0..EQUILIBRIUM_STEPS {
-            lattice.move_vacancy(beta);
+            system.move_vacancy(beta);
         }
 
         let mut int_energies: Vec<f32> = Vec::with_capacity(STEPS);
         for _ in 0..STEPS {
-            lattice.move_vacancy(beta);
-            int_energies.push(lattice.internal_energy())
+            system.move_vacancy(beta);
+            int_energies.push(system.internal_energy())
         }
 
         // doing it like this because of numerics

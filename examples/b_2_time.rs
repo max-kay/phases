@@ -1,9 +1,8 @@
 use phases::{Array2d, System};
 
 // model parameters
-const N_ATOMS: usize = 2;
-type Atom = phases::NumAtom<N_ATOMS>;
-type Concentration = phases::NumC<N_ATOMS>;
+type Atom = phases::NumAtom<2>;
+type Concentration = phases::NumC<2>;
 const WIDTH: usize = 200;
 const HEIGHT: usize = 200;
 const STEPS: usize = WIDTH * HEIGHT * 500;

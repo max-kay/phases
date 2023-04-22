@@ -2,13 +2,12 @@ use std::{fs::File, io::Write};
 
 use chrono::Utc;
 use phases::{
-    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array2d, System,
+    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array2d, Stats, System,
 };
 
 // model parameters
-const N_ATOMS: usize = 2;
-type Atom = phases::NumAtom<N_ATOMS>;
-type Concentration = phases::NumC<N_ATOMS>;
+type Atom = phases::NumAtom<2>;
+type Concentration = phases::NumC<2>;
 const WIDTH: usize = 512;
 const HEIGHT: usize = 512;
 const STEPS: usize = WIDTH * HEIGHT * 1000;
@@ -37,7 +36,10 @@ fn main() {
     make_system_file(&name, concentration).unwrap();
 
     let path = format!("out/logs/{}.csv", name);
-    let categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
+
+    let mut categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
+    categories.append(&mut Stats::get_categories(Some("atom 0 ")));
+    categories.append(&mut Stats::get_categories(Some("atom 2 ")));
 
     let (logger, handle) = CsvLogger::new(
         path,
@@ -58,13 +60,15 @@ fn main() {
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
         if i % (STEPS / LOG_ENTRIES) == 0 {
-            logger
-                .send_row(vec![
-                    i as f32 / (WIDTH * HEIGHT) as f32,
-                    temp(i),
-                    system.internal_energy() / (WIDTH * HEIGHT) as f32,
-                ])
-                .expect("error while sending row");
+            let mut values = vec![
+                i as f32 / (WIDTH * HEIGHT) as f32,
+                temp(i),
+                system.internal_energy() / (WIDTH * HEIGHT) as f32,
+            ];
+            let stats = system.get_region_stats();
+            values.append(&mut stats[&Atom::new(0)].as_f32_vec());
+            values.append(&mut stats[&Atom::new(1)].as_f32_vec());
+            logger.send_row(values).expect("error while sending row");
         }
         if i % (STEPS / FRAMES) == 0 {
             let frame = system.get_frame();
@@ -96,7 +100,7 @@ fn main() {
 
 fn make_system_file(
     name: &String,
-    concentration: phases::NumC<N_ATOMS>,
+    concentration: Concentration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
     let energies_dict = get_energies_dict(energies);

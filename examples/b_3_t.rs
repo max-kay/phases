@@ -7,9 +7,8 @@ use phases::{
 };
 
 // model parameters
-const N_ATOMS: usize = 2;
-type Atom = phases::NumAtom<N_ATOMS>;
-type Concentration = phases::NumC<N_ATOMS>;
+type Atom = phases::NumAtom<2>;
+type Concentration = phases::NumC<2>;
 const WIDTH: usize = 64;
 const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
@@ -99,7 +98,7 @@ fn main() {
 
 fn make_system_file(
     name: &String,
-    concentration: phases::NumC<N_ATOMS>,
+    concentration: Concentration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
     let energies_dict = get_energies_dict(energies);
