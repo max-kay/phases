@@ -3,6 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+use itertools::Itertools;
 use rand::Rng;
 
 use crate::{ATrait, Lattice, MyRng, NumAtom};
@@ -129,15 +130,19 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     }
 
     fn all_idx(&self) -> Vec<Self::Index> {
-        todo!()
+        (0..D as isize)
+            .cartesian_product(0..H as isize)
+            .cartesian_product(0..W as isize)
+            .map(|((z, y), x)| (x, y, z))
+            .collect_vec()
     }
 
-    fn all_items(&self) -> Vec<&Self::Atom> {
-        todo!()
+    fn flat_slice(&self) -> &[Self::Atom] {
+        self.grid.flatten().flatten()
     }
 
-    fn all_items_mut(&mut self) -> Vec<&mut Self::Atom> {
-        todo!()
+    fn flat_slice_mut(&mut self) -> &mut [Self::Atom] {
+        self.grid.flatten_mut().flatten_mut()
     }
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
@@ -177,13 +182,8 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
 }
 
 impl<const W: usize, const H: usize, const D: usize, const N: usize> Array3d<NumAtom<N>, W, H, D> {
-    pub fn get_slice(&self) -> &[u8] {
-        let slice = &self.grid[0]; // <=====| seems to need this borrow why? TODO
-        let ptr: *const NumAtom<N> = &slice[0][0];
-        let len = H * W * std::mem::size_of::<NumAtom<N>>();
-        // SAFETY: This is safe because we know the lenght of the array and since NumAtom<N>
-        // always just contains an u8 and is repr(transparent)
-        // and since we have &self there is nothing mutating the array
-        unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
+    pub fn get_img(&self) -> &[u8] {
+        // Safety: this is safe because NumAtom is repr(transparent) and only contains a u8
+        unsafe { std::mem::transmute(self.grid[0].flatten()) }
     }
 }

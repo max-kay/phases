@@ -233,7 +233,7 @@ impl<S: RegionCounter> System<S> {
 impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>> {
     pub fn get_frame(&self) -> gif::Frame<'_> {
         // the existance of vacancies is purposely ignored
-        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_slice(), None)
+        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_img(), None)
     }
 }
 
@@ -242,6 +242,6 @@ impl<const N: usize, const W: usize, const H: usize, const D: usize>
 {
     pub fn get_frame(&self) -> gif::Frame<'_> {
         // the existance of vacancies is purposely ignored
-        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_slice(), None)
+        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_img(), None)
     }
 }

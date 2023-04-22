@@ -3,6 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+use itertools::Itertools;
 use rand::Rng;
 
 use crate::{ATrait, Lattice, MyRng, NumAtom};
@@ -108,15 +109,18 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
     }
 
     fn all_idx(&self) -> Vec<Self::Index> {
-        todo!()
+        (0..H as isize)
+            .cartesian_product(0..W as isize)
+            .map(|(y, x)| (x, y))
+            .collect_vec()
     }
 
-    fn all_items(&self) -> Vec<&Self::Atom> {
-        todo!()
+    fn flat_slice(&self) -> &[Self::Atom] {
+        self.grid.flatten()
     }
 
-    fn all_items_mut(&mut self) -> Vec<&mut Self::Atom> {
-        todo!()
+    fn flat_slice_mut(&mut self) -> &mut [Self::Atom] {
+        self.grid.flatten_mut()
     }
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
@@ -148,12 +152,8 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
 }
 
 impl<const W: usize, const H: usize, const N: usize> Array2d<NumAtom<N>, W, H> {
-    pub fn get_slice(&self) -> &[u8] {
-        let ptr: *const NumAtom<N> = &self.grid[0][0];
-        let len = H * W * std::mem::size_of::<NumAtom<N>>();
-        // SAFETY: This is safe because we know the lenght of the array and NumAtom<N>
-        // always just contains an u8 and is repr(transparent)
-        // and since we have &self there is nothing mutating the array
-        unsafe { std::slice::from_raw_parts(ptr as *const u8, len) }
+    pub fn get_img(&self) -> &[u8] {
+        // SAFETY: This is safe because NumAtom<N> is repr(transparent) and only contains an u8
+        unsafe { std::mem::transmute(self.grid.flatten()) }
     }
 }

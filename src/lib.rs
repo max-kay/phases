@@ -1,4 +1,5 @@
 #![feature(associated_type_bounds)]
+#![feature(slice_flatten)]
 use std::{
     collections::HashMap,
     hash::Hash,
@@ -25,15 +26,10 @@ pub mod logs;
 
 type MyRng = Pcg64;
 
-pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index>
-// where
-    // Self: 's,
-{
+pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + ATrait;
     type Index: Copy;
     type Neighbors: Array<Self::Index>;
-    // type ItemIter: Iterator<Item = &'s Self::Atom>;
-    // type ItemIterMut: Iterator<Item = &'s mut Self::Atom>;
 
     fn fill_value(val: Self::Atom) -> Self;
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self;
@@ -43,8 +39,8 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
 
     fn all_idx(&self) -> Vec<Self::Index>;
 
-    fn all_items(&self) -> Vec<&Self::Atom>;
-    fn all_items_mut(&mut self) -> Vec<&mut Self::Atom>;
+    fn flat_slice(&self) -> &[Self::Atom];
+    fn flat_slice_mut(&mut self) -> &mut [Self::Atom];
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index;
     fn choose_idxs_uniformly(&self, rng: &mut MyRng) -> (Self::Index, Self::Index) {
@@ -95,7 +91,7 @@ pub trait RegionCounter: Lattice<Atom: Mark> {
                     .or_insert(0) += 1;
             }
         }
-        for atom in self.all_items_mut() {
+        for atom in self.flat_slice_mut() {
             atom.unmark()
         }
         map
@@ -110,6 +106,7 @@ pub trait RegionCounter: Lattice<Atom: Mark> {
         let mut count = 0;
         while let Some(idx) = stack.pop() {
             if *self[idx] == atom_type {
+                // Safety: the unsafe is passed to the caller
                 unsafe { self[idx].mark() };
                 count += 1;
                 stack.extend_from_slice(self.all_neighbors_to(idx).as_ref())
