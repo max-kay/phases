@@ -1,21 +1,24 @@
-use core::panic;
 use std::{ops::Deref, usize};
 
-use crate::{ATrait, CTrait, Mark};
+use crate::{ATrait, Mark};
 use rand::{prelude::*, Rng};
 use rand_distr::WeightedIndex;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
+/// A newtype around u8 that only allows values smaller than N
 pub struct NumAtom<const N: usize>(u8);
 
-// TODO: make a test if N is smaller that u8::MAX/2
 impl<const N: usize> Mark for NumAtom<N> {
+    /// This constant is for the check if the first bit is allways unoccupied
+    const OK: usize = 128 - N;
     /// # Safety
     /// the implementation of this function plays with bits and thus does not garantee
     /// that the value is < N
     /// values have to be unmarked after use
+    #[allow(clippy::no_effect, path_statements)]
     unsafe fn mark(&mut self) {
+        Self::OK;
         self.0 |= 0b1000_0000
     }
 
@@ -24,7 +27,7 @@ impl<const N: usize> Mark for NumAtom<N> {
     }
 
     fn is_marked(&self) -> bool {
-        self.0 & 0b1000_0000 != 0
+        (self.0 & 0b1000_0000) == 0b1000_0000
     }
 }
 
@@ -50,12 +53,10 @@ impl<const N: usize> ATrait for NumAtom<N> {
 }
 
 impl<const N: usize> NumAtom<N> {
+    /// Constructor for NumAtom<N> failes if val < N
     pub fn new(val: u8) -> Self {
-        if val < N as u8 {
-            Self(val)
-        } else {
-            panic!()
-        }
+        assert!(val < N as u8);
+        Self(val)
     }
 }
 
@@ -74,12 +75,6 @@ impl<const N: usize> NumC<N> {
 
     pub fn get_cs(&self) -> &[f64; N] {
         &self.cs
-    }
-}
-
-impl<const N: usize> CTrait for NumC<N> {
-    fn uniform() -> Self {
-        Self::new([1.0; N])
     }
 }
 

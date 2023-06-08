@@ -6,7 +6,7 @@ use std::{
 use itertools::Itertools;
 use rand::Rng;
 
-use crate::{ATrait, Lattice, MyRng, NumAtom};
+use crate::{ATrait, GifFrame, Lattice, MyRng, NumAtom};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
@@ -129,7 +129,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         ]
     }
 
-    fn all_idx(&self) -> Vec<Self::Index> {
+    fn all_idxs(&self) -> Vec<Self::Index> {
         (0..D as isize)
             .cartesian_product(0..H as isize)
             .cartesian_product(0..W as isize)
@@ -137,11 +137,11 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
             .collect_vec()
     }
 
-    fn flat_slice(&self) -> &[Self::Atom] {
+    fn as_flat_slice(&self) -> &[Self::Atom] {
         self.grid.flatten().flatten()
     }
 
-    fn flat_slice_mut(&mut self) -> &mut [Self::Atom] {
+    fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom] {
         self.grid.flatten_mut().flatten_mut()
     }
 
@@ -179,11 +179,21 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
         self[idx_1] = self[idx_2];
         self[idx_2] = temp;
     }
+
+    fn tot_sites(&self) -> usize {
+        W*H*D
+    }
 }
 
-impl<const W: usize, const H: usize, const D: usize, const N: usize> Array3d<NumAtom<N>, W, H, D> {
-    pub fn get_img(&self) -> &[u8] {
-        // Safety: this is safe because NumAtom is repr(transparent) and only contains a u8
-        unsafe { std::mem::transmute(self.grid[0].flatten()) }
+impl<const W: usize, const H: usize, const D: usize, const N: usize> GifFrame
+    for Array3d<NumAtom<N>, W, H, D>
+{
+    fn get_frame(&self) -> gif::Frame<'_> {
+        gif::Frame::from_indexed_pixels(
+            W as u16,
+            H as u16,
+            unsafe { std::mem::transmute(self.grid[0].flatten()) },
+            None,
+        )
     }
 }

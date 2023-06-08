@@ -21,6 +21,8 @@ pub use atoms::{get_energies_dict, NumAtom, NumC};
 mod system;
 pub use system::System;
 
+// mod macros;
+
 pub mod anim;
 pub mod logs;
 
@@ -29,7 +31,7 @@ type MyRng = Pcg64;
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + ATrait;
     type Index: Copy;
-    type Neighbors: Array<Self::Index>;
+    type Neighbors: AsRef<[Self::Index]>;
 
     fn fill_value(val: Self::Atom) -> Self;
     fn fill_with_fn(func: &mut impl FnMut(Self::Index) -> Self::Atom) -> Self;
@@ -37,10 +39,11 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn all_neighbors(&self) -> HashMap<(Self::Atom, Self::Atom), u32>;
     fn all_neighbors_to(&self, idx: Self::Index) -> Self::Neighbors;
 
-    fn all_idx(&self) -> Vec<Self::Index>;
+    fn all_idxs(&self) -> Vec<Self::Index>;
+    fn tot_sites(&self) -> usize;
 
-    fn flat_slice(&self) -> &[Self::Atom];
-    fn flat_slice_mut(&mut self) -> &mut [Self::Atom];
+    fn as_flat_slice(&self) -> &[Self::Atom];
+    fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom];
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index;
     fn choose_idxs_uniformly(&self, rng: &mut MyRng) -> (Self::Index, Self::Index) {
@@ -55,51 +58,35 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
 }
 
-pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
-    type Concentration: Copy + CTrait;
-    fn uniform(rng: &mut MyRng) -> Self;
-    fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
+pub trait GifFrame: Lattice {
+    fn get_frame(&self) -> gif::Frame<'_>;
 }
 
-pub trait Mark: ATrait {
-    /// # Safety
-    /// this function is allowed to manipulate bits of the underlying data
-    /// this has to be undone by using the `.unmark()` function
-    unsafe fn mark(&mut self);
-    fn unmark(&mut self);
-    fn is_marked(&self) -> bool;
-}
-
-pub trait CTrait {
-    fn uniform() -> Self;
-}
-
-pub trait Array<T: Copy>: Copy + IntoIterator<Item = T> + AsRef<[T]> {}
-
-impl<const N: usize, T: Copy> Array<T> for [T; N] {}
-
-pub trait RegionCounter: Lattice<Atom: Mark> {
+pub trait RegionCounter: Lattice
+where
+    <Self as Lattice>::Atom: Mark,
+{
     fn count_regions(&mut self) -> HashMap<Self::Atom, HashMap<u32, u32>> {
         let mut map = HashMap::new();
-        for idx in self.all_idx() {
+        for idx in self.all_idxs() {
             if !self[idx].is_marked() {
                 *map.entry(self[idx])
                     .or_insert(HashMap::new())
                     // SAFETY:
-                    // this is safe because we unmark all item in the for loop afterwards
+                    // this is safe because we unmark all item in the for_each afterwards
                     .entry(unsafe { self.mark_region_and_get_size(idx) })
                     .or_insert(0) += 1;
             }
         }
-        for atom in self.flat_slice_mut() {
-            atom.unmark()
-        }
+        self.as_flat_slice_mut()
+            .iter_mut()
+            .for_each(|atom| atom.unmark());
         map
     }
 
     /// # Safety
     /// this function uses mark() of the underlying atom type
-    /// which has to be undone unsing .unmark()
+    /// which has to be undone using .unmark()
     unsafe fn mark_region_and_get_size(&mut self, idx: Self::Index) -> u32 {
         let atom_type = *self[idx];
         let mut stack = vec![idx];
@@ -118,7 +105,28 @@ pub trait RegionCounter: Lattice<Atom: Mark> {
 
 impl<T: Lattice<Atom: Mark>> RegionCounter for T {}
 
-pub struct Stats {
+pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
+    type Concentration: Copy;
+    fn uniform(rng: &mut MyRng) -> Self;
+    fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
+}
+
+pub trait Mark: ATrait {
+    /// This constant is for the check if the first bit is allways unoccupied
+    const OK: usize;
+    /// # Safety
+    /// this function is allowed to manipulate bits of the underlying data
+    /// this has to be undone by using the `.unmark()` function
+    unsafe fn mark(&mut self);
+    fn unmark(&mut self);
+    fn is_marked(&self) -> bool;
+}
+
+// pub trait CTrait {
+//     // fn uniform() -> Self;
+// }
+
+pub struct RegionStats {
     min: u32,
     quart_1: u32,
     median: u32,
@@ -126,7 +134,7 @@ pub struct Stats {
     max: u32,
 }
 
-impl Stats {
+impl RegionStats {
     pub fn from_map(map: HashMap<u32, u32>) -> Self {
         let tot_blocks = map
             .iter()
@@ -184,7 +192,7 @@ impl Stats {
         out
     }
 
-    pub fn as_f32_vec(&self) -> Vec<f32> {
+    pub fn as_vec_f32(&self) -> Vec<f32> {
         vec![
             self.min as f32,
             self.quart_1 as f32,

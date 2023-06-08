@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use gif::Frame;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, Array2d, Array3d, Lattice, MyRng, NumAtom, RegionCounter, Stats};
+use crate::{ATrait, GifFrame, Lattice, MyRng, RegionCounter, RegionStats, Mark};
 
 pub struct System<L: Lattice> {
     bond_energies: fn(L::Atom, L::Atom) -> f32,
@@ -44,6 +43,10 @@ impl<L: Lattice> System<L> {
         obj.internal_energy();
         obj
     }
+
+    pub fn tot_sites(&self) -> usize {
+        self.lattice.tot_sites()
+    }
 }
 
 /// everything energies
@@ -70,9 +73,10 @@ impl<L: Lattice> System<L> {
     fn energies_around(&self, idx: L::Index) -> f32 {
         self.lattice
             .all_neighbors_to(idx)
-            .into_iter()
+            .as_ref()
+            .iter()
             .fold(0.0, |energy, idx_i| {
-                energy + (self.bond_energies)(self.lattice[idx], self.lattice[idx_i])
+                energy + (self.bond_energies)(self.lattice[idx], self.lattice[*idx_i])
             })
     }
 
@@ -90,56 +94,6 @@ impl<L: Lattice> System<L> {
 
 /// all swapping processes
 impl<L: Lattice> System<L> {
-    /// This uniformly chooses two lattice point and swaps the elements if the resulting energy is lower.
-    /// If there is no swap it repeats this process until it succeds.
-    pub fn swap_uniform(&mut self) -> bool {
-        let (idx_1, idx_2) = loop {
-            let (idx_1, idx_2) = self.lattice.choose_idxs_uniformly(&mut self.rng);
-            if self.lattice[idx_1] != self.lattice[idx_2] {
-                break (idx_1, idx_2);
-            }
-        };
-        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.lattice.swap_idxs(idx_1, idx_2);
-        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        let delta_e = e_1 - e_0;
-        if delta_e <= 0.0 {
-            self.update_energy(delta_e);
-            true
-        } else {
-            self.lattice.swap_idxs(idx_1, idx_2);
-            false
-        }
-    }
-
-    /// This function chooses one lattice point randomly and the second by pulling dy and dx from the distribution twice
-    /// and swap the atoms if the resulting energy is lower.
-    /// If there is no swap it repeats this process until it succeds.
-    pub fn swap_distr<T>(&mut self, distr: T) -> bool
-    where
-        T: Distribution<L::Index> + Copy,
-    {
-        let (idx_1, idx_2) = loop {
-            let (idx_1, idx_2) = self
-                .lattice
-                .choose_idxs_with_distribution(&mut self.rng, distr);
-            if self.lattice[idx_1] != self.lattice[idx_2] {
-                break (idx_1, idx_2);
-            }
-        };
-        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.lattice.swap_idxs(idx_1, idx_2);
-        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        let delta_e = e_1 - e_0;
-        if delta_e <= 0.0 {
-            self.update_energy(delta_e);
-            true
-        } else {
-            self.lattice.swap_idxs(idx_1, idx_2);
-            false
-        }
-    }
-
     /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
     pub fn monte_carlo_swap(&mut self, beta: f32) -> bool {
         let (idx_1, idx_2) = loop {
@@ -224,24 +178,18 @@ impl<L: Lattice> System<L> {
     }
 }
 
-impl<S: RegionCounter> System<S> {
-    pub fn get_region_stats(&mut self) -> HashMap<<S as Lattice>::Atom, Stats> {
-        Stats::gen_stats(self.lattice.count_regions())
-    }
-}
-
-impl<const N: usize, const W: usize, const H: usize> System<Array2d<NumAtom<N>, W, H>> {
+impl<L: GifFrame> System<L> {
     pub fn get_frame(&self) -> gif::Frame<'_> {
         // the existance of vacancies is purposely ignored
-        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_img(), None)
+        self.lattice.get_frame()
     }
 }
 
-impl<const N: usize, const W: usize, const H: usize, const D: usize>
-    System<Array3d<NumAtom<N>, W, H, D>>
+impl<L: RegionCounter> System<L>
+where
+    <L as Lattice>::Atom: Mark,
 {
-    pub fn get_frame(&self) -> gif::Frame<'_> {
-        // the existance of vacancies is purposely ignored
-        Frame::from_indexed_pixels(W as u16, H as u16, self.lattice.get_img(), None)
+    pub fn get_region_stats(&mut self) -> HashMap<<L as Lattice>::Atom, RegionStats> {
+        RegionStats::gen_stats(self.lattice.count_regions())
     }
 }
