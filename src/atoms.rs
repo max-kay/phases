@@ -80,7 +80,7 @@ impl<const N: usize> NumC<N> {
 
 pub trait Energies<A: ATrait> {
     fn get_interaction_energy(&self, a_1: A, a_2: A) -> f32;
-    fn as_dict() -> String;
+    fn as_dict(&self) -> String;
 }
 
 impl Energies<NumAtom<2>> for [f32; 4] {
@@ -88,7 +88,10 @@ impl Energies<NumAtom<2>> for [f32; 4] {
         unsafe { *self.get_unchecked(((*a_1 << 1) + *a_2) as usize) }
     }
 
-    fn as_dict() -> String {
-        todo!()
+    fn as_dict(&self) -> String {
+        format!(
+            "{{(0, 0): {}, (0, 1): {}, (1, 1): {}}}",
+            self[0], self[1], self[3]
+        )
     }
 }
