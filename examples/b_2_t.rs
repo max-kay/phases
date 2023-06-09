@@ -1,12 +1,7 @@
 use std::{fs::File, io::Write};
 
 use chrono::Utc;
-use phases::{
-    anim::prepare_encoder, energies, get_energies_dict, logs::CsvLogger, run_python, Array2d,
-    RegionStats, System,
-};
-
-energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
+use phases::{anim::prepare_encoder, logs::CsvLogger, run_python, Array2d, RegionStats, System, Energies};
 
 // model parameters
 type Atom = phases::NumAtom<2>;
@@ -14,6 +9,7 @@ type Concentration = phases::NumC<2>;
 const WIDTH: usize = 64;
 const HEIGHT: usize = 32;
 const STEPS: usize = WIDTH * HEIGHT * 400_000;
+const ENERGIES: [f32; 4] = [-1.0, -0.75, -0.75, -1.0];
 
 // temperature
 const START: f32 = 8.0;
@@ -58,7 +54,7 @@ fn main() {
     );
 
     let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, Some("my_seed"), Some(concentration));
+        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, Some("my_seed"), Some(concentration));
 
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
@@ -106,7 +102,7 @@ fn make_system_file(
     concentration: Concentration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
-    let energies_dict = get_energies_dict(energies);
+    let energies_dict = ENERGIES.as_dict();
     writeln!(file, "{name}")?;
     writeln!(file, "Energies")?;
     writeln!(file, "{energies_dict}")?;

@@ -1,10 +1,8 @@
 use std::{fs::File, io::Write, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array2d, System, energies};
+use phases::{logs::CsvLogger, run_python, Array2d, Energies, System};
 use rayon::prelude::*;
-
-energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
 
 // model parameters
 type Atom = phases::NumAtom<2>;
@@ -14,6 +12,8 @@ const HEIGHT: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * 40_000;
 const FIRST_STEPS: usize = WIDTH * HEIGHT * 40_000;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100_000;
+
+const ENERGIES: [f32; 4] = [-1.0, -0.75, -0.75, -1.0];
 
 // temp
 const TEMP_STEPS: usize = 15;
@@ -35,7 +35,7 @@ fn main() {
         .rev()
         .collect();
     let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
-        .map(|i| (i as f64 / (CONCENTRATION_STEPS-1) as f64) * 0.92 + 0.04)
+        .map(|i| (i as f64 / (CONCENTRATION_STEPS - 1) as f64) * 0.92 + 0.04)
         .collect();
 
     let (logger, handle) = CsvLogger::new(
@@ -70,7 +70,7 @@ fn main() {
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
+        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, None, Some(concentration));
     for _ in 0..FIRST_STEPS {
         system.move_vacancy(1.0 / temps[0]);
     }
@@ -114,7 +114,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
 
 fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
-    let energies_dict = get_energies_dict(energies);
+    let energies_dict = ENERGIES.as_dict();
 
     writeln!(file, "{}", name)?;
     writeln!(file, "energies:")?;
@@ -134,4 +134,3 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "{}", CONCENTRATION_STEPS)?;
     Ok(())
 }
-

@@ -1,7 +1,7 @@
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System, energies};
+use phases::{logs::CsvLogger, run_python, Array3d, Energies, System};
 use rayon::prelude::*;
 
 // model parameters
@@ -13,7 +13,7 @@ const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 60;
 
-energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
+const ENERGIES: [f32; 4] = [-1.0, -0.75, -0.75, -1.0];
 
 // temp
 const TEMP_STEPS: usize = 100;
@@ -70,7 +70,7 @@ fn main() {
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut system =
-        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>>::new(energies, None, Some(concentration));
+        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(ENERGIES, None, Some(concentration));
     for temp in temps {
         let beta = 1.0 / temp;
 
@@ -111,7 +111,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
 
 fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::create(format!("out/systems/{}.txt", name))?;
-    let energies_dict = get_energies_dict(energies);
+    let energies_dict = ENERGIES.as_dict();
 
     writeln!(file, "{}", name)?;
     writeln!(file, "energies:")?;
@@ -131,4 +131,3 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     writeln!(file, "{}", CONCENTRATION_STEPS)?;
     Ok(())
 }
-
