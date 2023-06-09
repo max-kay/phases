@@ -1,23 +1,26 @@
-use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
+use std::{fs::File, io::Write, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array2d, System};
+use phases::{get_energies_dict, logs::CsvLogger, run_python, Array2d, System, energies};
 use rayon::prelude::*;
+
+energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
 
 // model parameters
 type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
-const WIDTH: usize = 512;
-const HEIGHT: usize = 512;
-const STEPS: usize = WIDTH * HEIGHT * 100;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 200;
+const WIDTH: usize = 32;
+const HEIGHT: usize = 64;
+const STEPS: usize = WIDTH * HEIGHT * 40_000;
+const FIRST_STEPS: usize = WIDTH * HEIGHT * 40_000;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100_000;
 
 // temp
-const TEMP_STEPS: usize = 50;
-const START_TEMP: f32 = 200.0;
+const TEMP_STEPS: usize = 15;
+const START_TEMP: f32 = 2.0;
 
 // concentration
-const CONCENTRATION_STEPS: usize = 7;
+const CONCENTRATION_STEPS: usize = 8;
 
 static PROGRESS_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -32,7 +35,7 @@ fn main() {
         .rev()
         .collect();
     let concentrations: Vec<f64> = (0..CONCENTRATION_STEPS)
-        .map(|i| (i as f64 / CONCENTRATION_STEPS as f64) * 0.92 + 0.04)
+        .map(|i| (i as f64 / (CONCENTRATION_STEPS-1) as f64) * 0.92 + 0.04)
         .collect();
 
     let (logger, handle) = CsvLogger::new(
@@ -60,7 +63,7 @@ fn main() {
         .join()
         .expect("failed to log")
         .expect("failed to log");
-    println!("took {:?}", start.elapsed());
+    println!("finished running {}, took {:?}", name, start.elapsed());
 
     run_python("python/b_f.py", &name)
 }
@@ -68,6 +71,9 @@ fn main() {
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut system =
         System::<Array2d<Atom, WIDTH, HEIGHT>>::new(energies, None, Some(concentration));
+    for _ in 0..FIRST_STEPS {
+        system.move_vacancy(1.0 / temps[0]);
+    }
     for temp in temps {
         let beta = 1.0 / temp;
 
@@ -75,35 +81,35 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             system.move_vacancy(beta);
         }
 
-        let mut int_energies: Vec<f32> = Vec::with_capacity(STEPS);
+        let mut int_energies: Vec<f64> = Vec::with_capacity(STEPS);
         for _ in 0..STEPS {
             system.move_vacancy(beta);
-            int_energies.push(system.internal_energy())
+            int_energies.push(system.internal_energy() as f64)
         }
 
         // doing it like this because of numerics
-        let avg_energy: f32 = int_energies.iter().sum::<f32>() / int_energies.len() as f32;
+        let avg_energy = int_energies.iter().sum::<f64>() / int_energies.len() as f64;
         let variance = int_energies
             .iter()
             .map(|e| (*e - avg_energy).powi(2))
-            .sum::<f32>()
-            / int_energies.len() as f32;
-        let avg_energy = avg_energy / (WIDTH * HEIGHT) as f32;
-        let variance = variance / (WIDTH * HEIGHT) as f32 / (WIDTH * HEIGHT) as f32;
+            .sum::<f64>()
+            / int_energies.len() as f64;
+        let avg_energy = avg_energy / (WIDTH * HEIGHT) as f64;
+        let variance = variance / (WIDTH * HEIGHT * WIDTH * HEIGHT) as f64;
 
         logger
             .send_row(vec![
                 concentration.get_cs()[0] as f32,
                 temp,
-                avg_energy,
-                variance / temp / temp,
+                avg_energy as f32,
+                variance as f32 / temp / temp,
             ])
             .unwrap();
 
         let progress = PROGRESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         println!("{} of {}", progress, TEMP_STEPS * CONCENTRATION_STEPS);
     }
-    drop(logger)
+    std::mem::drop(logger)
 }
 
 fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
@@ -129,9 +135,3 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[inline(always)]
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    // Safety: this is safe because NumAtom<2> can only be 0 or 1
-    // and thus the shift is equal to multiplying by 2
-    unsafe { *[-4.0, 3.0, 3.0, -1.0].get_unchecked(((*a1 << 1) + *a2) as usize) }
-}

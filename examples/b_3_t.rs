@@ -3,7 +3,8 @@ use std::{fs::File, io::Write};
 use chrono::Utc;
 
 use phases::{
-    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array3d, System,
+    anim::prepare_encoder, get_energies_dict, logs::CsvLogger, run_python, Array3d, RegionStats,
+    System, energies,
 };
 
 // model parameters
@@ -13,6 +14,8 @@ const WIDTH: usize = 64;
 const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 1000;
+
+energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
 
 // temperature
 const START: f32 = 150.0;
@@ -36,7 +39,10 @@ fn main() {
     let name = format!("b_3_t_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
     make_system_file(&name, concentration).unwrap();
     let path = format!("out/logs/{}.csv", name);
-    let categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
+
+    let mut categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
+    categories.append(&mut RegionStats::get_categories(Some("atom 0 ")));
+    categories.append(&mut RegionStats::get_categories(Some("atom 2 ")));
 
     let (logger, handle) = CsvLogger::new(
         path,
@@ -60,13 +66,15 @@ fn main() {
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
         if i % (STEPS / LOG_ENTRIES) == 0 {
-            logger
-                .send_row(vec![
-                    i as f32 / (WIDTH * HEIGHT * DEPTH) as f32,
-                    temp(i),
-                    system.internal_energy() / (WIDTH * HEIGHT * DEPTH) as f32,
-                ])
-                .expect("error while sending row");
+            let mut values = vec![
+                i as f32 / (WIDTH * HEIGHT * DEPTH) as f32,
+                temp(i),
+                system.internal_energy() / (WIDTH * HEIGHT * DEPTH) as f32,
+            ];
+            let stats = system.get_region_stats();
+            values.append(&mut stats[&Atom::new(0)].as_vec_f32());
+            values.append(&mut stats[&Atom::new(1)].as_vec_f32());
+            logger.send_row(values).expect("error while sending row");
         }
         if i % (STEPS / FRAMES) == 0 {
             let frame = system.get_frame();
@@ -114,9 +122,3 @@ fn make_system_file(
     Ok(())
 }
 
-#[inline(always)]
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    // Safety: this is safe because NumAtom<2> can only be 0 or 1
-    // and thus the shift is equal to multiplying by 2
-    unsafe { *[-4.0, 3.0, 3.0, -1.0].get_unchecked(((*a1 << 1) + *a2) as usize) }
-}

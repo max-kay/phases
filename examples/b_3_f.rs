@@ -1,7 +1,7 @@
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System};
+use phases::{get_energies_dict, logs::CsvLogger, run_python, Array3d, System, energies};
 use rayon::prelude::*;
 
 // model parameters
@@ -12,6 +12,8 @@ const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * DEPTH * 100;
 const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * DEPTH * 60;
+
+energies!(2, 00: -1.0, 01: -0.75, 11: -1.0);
 
 // temp
 const TEMP_STEPS: usize = 100;
@@ -130,9 +132,3 @@ fn make_system_file(name: &String) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[inline(always)]
-fn energies(a1: Atom, a2: Atom) -> f32 {
-    // Safety: this is safe because NumAtom<2> can only be 0 or 1
-    // and thus the shift is equal to multiplying by 2
-    unsafe { *[-4.0, 3.0, 3.0, -1.0].get_unchecked(((*a1 << 1) + *a2) as usize) }
-}
