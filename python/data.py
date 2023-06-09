@@ -1,5 +1,3 @@
-#!/opt/homebrew/Caskroom/miniconda/base/envs/datasc
-import pretty_errors
 import numpy as np
 from matplotlib import cm
 import pandas as pd
@@ -23,14 +21,20 @@ def add_entropy_and_free_energy(df: pd.DataFrame):
     def fn(group):
         entropy = cumulative_trapezoid(
             np.where(
-                np.bitwise_or(group["temp"].values == 0, group["c"].isna()),
+                np.bitwise_or(group["temp"].values == 0, group["heat capacity"].isna()),
                 0,
-                group["c"].values / group["temp"].values,
+                group["heat capacity"].values / group["temp"].values,
             ),
             x=group["temp"].values,
             initial=0,
         )
-        df.loc[group.index, "entropy"] = entropy
+        concentration = group.name
+        entropy_ideal = -(
+            concentration * np.log(concentration)
+            + (1 - concentration) * np.log(1 - concentration)
+        )
+        constant = entropy_ideal - entropy[-1]
+        df.loc[group.index, "entropy"] = entropy# + constant
         df.loc[group.index, "free energy"] = group["energy"] - group["temp"] * entropy
 
     df.groupby("c").apply(fn)

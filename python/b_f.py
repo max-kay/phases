@@ -1,4 +1,3 @@
-#!/opt/homebrew/Caskroom/miniconda/base/envs/datasc
 import numpy as np
 from sys import argv
 import pandas as pd
@@ -9,11 +8,10 @@ import data
 if len(argv) == 2:
     name = argv[1]
 else:
-    name = "b_2_f_2023-04-17_14-21"
+    name = "b_2_f_2023-04-25_13-14"
 
 df = data.prepare_data(f"out/logs/{name}.csv")
-
-df = df[df["temp"] < 100]
+print(df)
 
 fig = plt.figure()
 
@@ -61,12 +59,12 @@ ax.set_ylabel("T")
 ax.set_zlabel("S")
 
 ax = fig.add_subplot(236, projection="3d")
-data.plot_grid_3d(df["c"], df["temp"], df["mu a"], ax)
+data.plot_grid_3d(df["c"], df["temp"], df["temp"] * df["entropy"], ax)
 
-ax.set_title("Chemical Potential")
+ax.set_title("TS")
 ax.set_xlabel("$X_a$")
 ax.set_ylabel("T")
-ax.set_zlabel("$\mu _a$")
+ax.set_zlabel("TS")
 
 plt.get_current_fig_manager().full_screen_toggle()
 

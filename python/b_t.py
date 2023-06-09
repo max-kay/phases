@@ -1,5 +1,3 @@
-#!/opt/homebrew/Caskroom/miniconda/base/envs/datasc python
-import pretty_errors
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
