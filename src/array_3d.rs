@@ -138,11 +138,19 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     }
 
     fn as_flat_slice(&self) -> &[Self::Atom] {
-        self.grid.flatten().flatten()
+        // TODO this has to be doable better
+        if std::mem::size_of::<Self::Atom>() == 0 {
+            panic!()
+        }
+        unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H * D) }
     }
 
     fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom] {
-        self.grid.flatten_mut().flatten_mut()
+        // TODO this has to be doable better
+        if std::mem::size_of::<Self::Atom>() == 0 {
+            panic!()
+        }
+        unsafe { std::slice::from_raw_parts_mut(self.grid.as_mut_ptr().cast(), W * H * D) }
     }
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
@@ -181,7 +189,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     }
 
     fn tot_sites(&self) -> usize {
-        W*H*D
+        W * H * D
     }
 }
 
@@ -189,10 +197,11 @@ impl<const W: usize, const H: usize, const D: usize, const N: usize> GifFrame
     for Array3d<NumAtom<N>, W, H, D>
 {
     fn get_frame(&self) -> gif::Frame<'_> {
+        let ptr = self.grid.as_ptr().cast();
         gif::Frame::from_indexed_pixels(
             W as u16,
             H as u16,
-            unsafe { std::mem::transmute(self.grid[0].flatten()) },
+            unsafe { std::slice::from_raw_parts(ptr, W * H) },
             None,
         )
     }

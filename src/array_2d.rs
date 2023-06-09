@@ -116,11 +116,19 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
     }
 
     fn as_flat_slice(&self) -> &[Self::Atom] {
-        self.grid.flatten()
+        // TODO this has to be doable better
+        if std::mem::size_of::<Self::Atom>() == 0 {
+            panic!()
+        }
+        unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H) }
     }
 
     fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom] {
-        self.grid.flatten_mut()
+        // TODO this has to be doable better
+        if std::mem::size_of::<Self::Atom>() == 0 {
+            panic!()
+        }
+        unsafe { std::slice::from_raw_parts_mut(self.grid.as_mut_ptr().cast(), W * H) }
     }
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
@@ -151,7 +159,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
     }
 
     fn tot_sites(&self) -> usize {
-        W*H
+        W * H
     }
 }
 
@@ -161,7 +169,7 @@ impl<const W: usize, const H: usize, const N: usize> GifFrame for Array2d<NumAto
         gif::Frame::from_indexed_pixels(
             W as u16,
             H as u16,
-            unsafe { std::mem::transmute(self.grid.flatten()) },
+            unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H) },
             None,
         )
     }

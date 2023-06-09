@@ -1,5 +1,4 @@
-#![feature(associated_type_bounds)]
-#![feature(slice_flatten)]
+// #![feature(slice_flatten)]
 use std::{
     collections::HashMap,
     hash::Hash,
@@ -103,7 +102,12 @@ where
     }
 }
 
-impl<T: Lattice<Atom: Mark>> RegionCounter for T {}
+impl<T> RegionCounter for T
+where
+    T: Lattice,
+    <T as Lattice>::Atom: Mark,
+{
+}
 
 pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
     type Concentration: Copy;
@@ -230,4 +234,14 @@ macro_rules! energies {
             unsafe { *[$e_00, $e_01, $e_01, $e_11].get_unchecked(((*a1 << 1) + *a2) as usize) }
         }
     };
+}
+
+pub fn flatten<T, const N: usize, const M: usize>(arr: &[[T; N]; M]) -> &[T] {
+    // SAFETY: `self.len() * N` cannot overflow because `self` is
+    // already in the address space.
+    // SAFETY: `[T]` is layout-identical to `[T; N]`
+    if std::mem::size_of::<T>() == 0 {
+        panic!()
+    }
+    unsafe { std::slice::from_raw_parts(arr.as_ptr().cast(), N * M) }
 }
