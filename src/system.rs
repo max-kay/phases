@@ -19,19 +19,16 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     pub fn new(
         bond_energies: E,
         seed: Option<&str>,
-        concentration: Option<<L::Atom as ATrait>::Concentration>,
+        concentration: <L::Atom as ATrait>::Concentration,
     ) -> Self {
         let mut rng = match seed {
             Some(seed) => Seeder::from(seed).make_rng(),
             None => MyRng::from_entropy(),
         };
 
-        let grid = match concentration {
-            None => L::fill_with_fn(&mut |_| L::Atom::uniform(&mut rng)),
-            Some(concentration) => L::fill_with_fn(&mut |_| {
-                <L::Atom as ATrait>::with_concentration(&mut rng, concentration)
-            }),
-        };
+        let grid = L::fill_with_fn(&mut |_| {
+            <L::Atom as ATrait>::with_concentration(&mut rng, concentration)
+        });
 
         let mut obj = Self {
             bond_energies,
@@ -145,9 +142,9 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
         }
     }
 
+    /// this function does not put any other values in to the vacancy spot.
+    /// it just reinterprets this spot as being empty thus having bond energies = 0
     pub fn move_vacancy(&mut self, beta: f32) -> bool {
-        // this function does not put any other values in to the vacancy spot.
-        // it just reinterprets this spot as being empty thus having bond energies = 0
 
         if let Some(idx) = self.vacancy {
             let all_neighbors_to = self.lattice.all_neighbors_to(idx);
@@ -178,6 +175,12 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
             self.vacancy = Some(self.lattice.random_idx(&mut self.rng));
             self.move_vacancy(beta)
         }
+    }
+}
+
+impl<L: Lattice + Clone, E: Energies<L::Atom>> System<L, E> {
+    pub fn return_state(&self) -> L {
+        self.lattice.clone()
     }
 }
 

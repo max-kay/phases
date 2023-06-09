@@ -70,7 +70,7 @@ fn main() {
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, None, Some(concentration));
+        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, None, concentration);
     for _ in 0..FIRST_STEPS {
         system.move_vacancy(1.0 / temps[0]);
     }

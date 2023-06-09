@@ -9,6 +9,7 @@ use rand::Rng;
 use crate::{ATrait, GifFrame, Lattice, MyRng, NumAtom};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
+#[derive(Clone)]
 pub struct Array3d<T, const W: usize, const H: usize, const D: usize> {
     pub grid: Box<[[[T; W]; H]; D]>,
 }

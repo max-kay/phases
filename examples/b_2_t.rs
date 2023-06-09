@@ -54,7 +54,7 @@ fn main() {
     );
 
     let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, Some("my_seed"), Some(concentration));
+        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, Some("my_seed"), concentration);
 
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));

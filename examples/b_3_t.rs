@@ -2,7 +2,9 @@ use std::{fs::File, io::Write};
 
 use chrono::Utc;
 
-use phases::{anim::prepare_encoder, logs::CsvLogger, run_python, Array3d, RegionStats, System, Energies};
+use phases::{
+    anim::prepare_encoder, logs::CsvLogger, run_python, Array3d, Energies, RegionStats, System,
+};
 
 // model parameters
 type Atom = phases::NumAtom<2>;
@@ -57,7 +59,7 @@ fn main() {
     let mut system = System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(
         ENERGIES,
         Some("my_seed"),
-        Some(concentration),
+        concentration,
     );
 
     for i in 0..STEPS {

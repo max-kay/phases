@@ -70,7 +70,7 @@ fn main() {
 
 fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, logger: CsvLogger) {
     let mut system =
-        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(ENERGIES, None, Some(concentration));
+        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(ENERGIES, None, concentration);
     for temp in temps {
         let beta = 1.0 / temp;
 
