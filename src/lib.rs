@@ -15,7 +15,7 @@ mod array_3d;
 pub use array_3d::Array3d;
 
 mod atoms;
-pub use atoms::{get_energies_dict, NumAtom, NumC};
+pub use atoms::{NumAtom, NumC, Energies};
 
 mod system;
 pub use system::System;
@@ -222,18 +222,6 @@ pub fn run_python(script: &str, arg: &str) {
         }
         Err(err) => eprintln!("failed to run python command {}", err),
     }
-}
-
-#[macro_export]
-macro_rules! energies {
-    (2, 00: $e_00:literal, 01: $e_01:literal, 11: $e_11:literal) => {
-        #[inline(always)]
-        fn energies(a1: $crate::NumAtom<2>, a2: $crate::NumAtom<2>) -> f32 {
-            // Safety: this is safe because NumAtom<2> can only be 0 or 1
-            // and thus the shift is equal to multiplying by 2
-            unsafe { *[$e_00, $e_01, $e_01, $e_11].get_unchecked(((*a1 << 1) + *a2) as usize) }
-        }
-    };
 }
 
 pub fn flatten<T, const N: usize, const M: usize>(arr: &[[T; N]; M]) -> &[T] {

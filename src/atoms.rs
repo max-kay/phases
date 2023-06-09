@@ -78,18 +78,17 @@ impl<const N: usize> NumC<N> {
     }
 }
 
-pub fn get_energies_dict<const N: usize>(e_func: fn(NumAtom<N>, NumAtom<N>) -> f32) -> String {
-    let mut string = "{".to_owned();
-    for i in 0..N as u8 {
-        for j in i..N as u8 {
-            string.push_str(&format!(
-                "({}, {}): {}, ",
-                i,
-                j,
-                (e_func)(NumAtom::<N>::new(i), NumAtom::<N>::new(j))
-            ))
-        }
+pub trait Energies<A: ATrait> {
+    fn get_interaction_energy(&self, a_1: A, a_2: A) -> f32;
+    fn as_dict() -> String;
+}
+
+impl Energies<NumAtom<2>> for [f32; 4] {
+    fn get_interaction_energy(&self, a_1: NumAtom<2>, a_2: NumAtom<2>) -> f32 {
+        unsafe { *self.get_unchecked(((*a_1 << 1) + *a_2) as usize) }
     }
-    string.push('}');
-    string
+
+    fn as_dict() -> String {
+        todo!()
+    }
 }

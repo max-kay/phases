@@ -4,10 +4,10 @@ use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, GifFrame, Lattice, MyRng, RegionCounter, RegionStats, Mark};
+use crate::{ATrait, Energies, GifFrame, Lattice, Mark, MyRng, RegionCounter, RegionStats};
 
-pub struct System<L: Lattice> {
-    bond_energies: fn(L::Atom, L::Atom) -> f32,
+pub struct System<L: Lattice, E: Energies<L::Atom>> {
+    bond_energies: E,
     lattice: L,
     rng: MyRng,
     internal_energy: Option<f32>,
@@ -15,9 +15,9 @@ pub struct System<L: Lattice> {
 }
 
 /// all constructors
-impl<L: Lattice> System<L> {
+impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     pub fn new(
-        bond_energies: fn(L::Atom, L::Atom) -> f32,
+        bond_energies: E,
         seed: Option<&str>,
         concentration: Option<<L::Atom as ATrait>::Concentration>,
     ) -> Self {
@@ -50,20 +50,20 @@ impl<L: Lattice> System<L> {
 }
 
 /// everything energies
-impl<L: Lattice> System<L> {
+impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     /// This function returns the total energy of the system.
     /// This is fast when the energy is already calculated and recalculates it if it is not.
     pub fn internal_energy(&mut self) -> f32 {
         if let Some(energy) = self.internal_energy {
             energy
         } else {
-            let energy = self
-                .lattice
-                .all_neighbors()
-                .iter()
-                .fold(0.0, |energy, ((a1, a2), count)| {
-                    energy + (self.bond_energies)(*a1, *a2) * *count as f32
-                });
+            let energy =
+                self.lattice
+                    .all_neighbors()
+                    .iter()
+                    .fold(0.0, |energy, ((a1, a2), count)| {
+                        energy + self.bond_energies.get_interaction_energy(*a1, *a2) * *count as f32
+                    });
             self.internal_energy = Some(energy);
             energy
         }
@@ -76,7 +76,10 @@ impl<L: Lattice> System<L> {
             .as_ref()
             .iter()
             .fold(0.0, |energy, idx_i| {
-                energy + (self.bond_energies)(self.lattice[idx], self.lattice[*idx_i])
+                energy
+                    + self
+                        .bond_energies
+                        .get_interaction_energy(self.lattice[idx], self.lattice[*idx_i])
             })
     }
 
@@ -93,7 +96,7 @@ impl<L: Lattice> System<L> {
 }
 
 /// all swapping processes
-impl<L: Lattice> System<L> {
+impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
     pub fn monte_carlo_swap(&mut self, beta: f32) -> bool {
         let (idx_1, idx_2) = loop {
@@ -178,14 +181,14 @@ impl<L: Lattice> System<L> {
     }
 }
 
-impl<L: GifFrame> System<L> {
+impl<L: GifFrame, E: Energies<L::Atom>> System<L, E> {
     pub fn get_frame(&self) -> gif::Frame<'_> {
         // the existance of vacancies is purposely ignored
         self.lattice.get_frame()
     }
 }
 
-impl<L: RegionCounter> System<L>
+impl<L: RegionCounter, E: Energies<L::Atom>> System<L, E>
 where
     <L as Lattice>::Atom: Mark,
 {
