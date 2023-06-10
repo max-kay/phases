@@ -3,7 +3,7 @@ use std::{fs::File, io::Write};
 use chrono::Utc;
 
 use phases::{
-    anim::prepare_encoder, logs::CsvLogger, run_python, Array3d, Energies, RegionStats, System,
+    anim::prepare_file_encoder, logs::CsvLogger, run_python, Array3d, Energies, RegionStats, System,
 };
 
 // model parameters
@@ -49,7 +49,7 @@ fn main() {
         categories,
     );
 
-    let mut encoder = prepare_encoder(
+    let mut encoder = prepare_file_encoder(
         format!("out/gifs/{}.gif", name),
         WIDTH as u16,
         HEIGHT as u16,
@@ -88,7 +88,7 @@ fn main() {
         eprintln!("an error occurred while logging: {:?}", err)
     };
 
-    let mut encoder = prepare_encoder(
+    let mut encoder = prepare_file_encoder(
         format!("out/gifs/{}_last.gif", name),
         WIDTH as u16,
         HEIGHT as u16,

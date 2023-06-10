@@ -7,7 +7,7 @@ const PALETTE: &[u8] = &[
     0x5E, 0x00, 0xCC, 0x79, 0xA7, 0x00, 0x00, 0x00,
 ];
 
-pub fn prepare_encoder(
+pub fn prepare_file_encoder(
     path: impl AsRef<Path>,
     width: u16,
     height: u16,
@@ -16,6 +16,29 @@ pub fn prepare_encoder(
     let file = File::create(path).expect("Error while creating file!");
     let mut encoder =
         gif::Encoder::new(file, width, height, PALETTE).expect("Error while creating gif encoder");
+    encoder
+        .set_repeat(Repeat::Infinite)
+        .expect("Error while setting repeats!");
+    if let Some(mus_per_frame) = mus_per_frame {
+        encoder
+            .write_extension(ExtensionData::new_control_ext(
+                mus_per_frame,
+                gif::DisposalMethod::Any,
+                true,
+                None,
+            ))
+            .expect("Error while writing ExtensionData!");
+    }
+    encoder
+}
+
+pub fn prepare_vec_encoder(
+    width: u16,
+    height: u16,
+    mus_per_frame: Option<u16>,
+) -> gif::Encoder<Vec<u8>> {
+    let mut encoder = gif::Encoder::new(Vec::new(), width, height, PALETTE)
+        .expect("Error while creating gif location");
     encoder
         .set_repeat(Repeat::Infinite)
         .expect("Error while setting repeats!");
