@@ -145,7 +145,6 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     /// this function does not put any other values in to the vacancy spot.
     /// it just reinterprets this spot as being empty thus having bond energies = 0
     pub fn move_vacancy(&mut self, beta: f32) -> bool {
-
         if let Some(idx) = self.vacancy {
             let all_neighbors_to = self.lattice.all_neighbors_to(idx);
             let other_idx = all_neighbors_to
@@ -175,12 +174,6 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
             self.vacancy = Some(self.lattice.random_idx(&mut self.rng));
             self.move_vacancy(beta)
         }
-    }
-}
-
-impl<L: Lattice + Clone, E: Energies<L::Atom>> System<L, E> {
-    pub fn return_state(&self) -> L {
-        self.lattice.clone()
     }
 }
 
