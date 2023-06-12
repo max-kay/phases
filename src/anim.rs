@@ -11,7 +11,7 @@ pub fn prepare_file_encoder(
     path: impl AsRef<Path>,
     width: u16,
     height: u16,
-    mus_per_frame: Option<u16>,
+    hundredths_per_frame: Option<u16>,
     palette: &[u8]
 ) -> gif::Encoder<File> {
     let file = File::create(path).expect("Error while creating file!");
@@ -20,10 +20,10 @@ pub fn prepare_file_encoder(
     encoder
         .set_repeat(Repeat::Infinite)
         .expect("Error while setting repeats!");
-    if let Some(mus_per_frame) = mus_per_frame {
+    if let Some(hundredths_per_frame) = hundredths_per_frame {
         encoder
             .write_extension(ExtensionData::new_control_ext(
-                mus_per_frame,
+                hundredths_per_frame,
                 gif::DisposalMethod::Any,
                 true,
                 None,
@@ -36,7 +36,7 @@ pub fn prepare_file_encoder(
 pub fn prepare_vec_encoder(
     width: u16,
     height: u16,
-    mus_per_frame: Option<u16>,
+    hundredths_per_frame: Option<u16>,
     palette: &[u8]
 ) -> gif::Encoder<Vec<u8>> {
     let mut encoder = gif::Encoder::new(Vec::new(), width, height, palette)
@@ -44,10 +44,10 @@ pub fn prepare_vec_encoder(
     encoder
         .set_repeat(Repeat::Infinite)
         .expect("Error while setting repeats!");
-    if let Some(mus_per_frame) = mus_per_frame {
+    if let Some(hundredths_per_frame) = hundredths_per_frame {
         encoder
             .write_extension(ExtensionData::new_control_ext(
-                mus_per_frame,
+                hundredths_per_frame,
                 gif::DisposalMethod::Any,
                 true,
                 None,
