@@ -2,7 +2,7 @@ use std::{fs::File, io::Write};
 
 use chrono::Utc;
 use phases::{
-    anim::prepare_file_encoder, logs::CsvLogger, run_python, Array2d, Energies, RegionStats, System,
+    anim::{prepare_file_encoder, self}, logs::CsvLogger, run_python, Array2d, Energies, RegionStats, System,
 };
 
 // model parameters
@@ -53,6 +53,7 @@ fn main() {
         WIDTH as u16,
         HEIGHT as u16,
         Some((LENGTH / FRAMES) as u16),
+        anim::PALETTE,
     );
 
     let mut system =
@@ -89,6 +90,7 @@ fn main() {
         WIDTH as u16,
         HEIGHT as u16,
         None,
+        anim::PALETTE
     );
     encoder
         .write_frame(&system.get_frame())

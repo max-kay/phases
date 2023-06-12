@@ -12,10 +12,11 @@ pub fn prepare_file_encoder(
     width: u16,
     height: u16,
     mus_per_frame: Option<u16>,
+    palette: &[u8]
 ) -> gif::Encoder<File> {
     let file = File::create(path).expect("Error while creating file!");
     let mut encoder =
-        gif::Encoder::new(file, width, height, PALETTE).expect("Error while creating gif encoder");
+        gif::Encoder::new(file, width, height, palette).expect("Error while creating gif encoder");
     encoder
         .set_repeat(Repeat::Infinite)
         .expect("Error while setting repeats!");
@@ -36,8 +37,9 @@ pub fn prepare_vec_encoder(
     width: u16,
     height: u16,
     mus_per_frame: Option<u16>,
+    palette: &[u8]
 ) -> gif::Encoder<Vec<u8>> {
-    let mut encoder = gif::Encoder::new(Vec::new(), width, height, PALETTE)
+    let mut encoder = gif::Encoder::new(Vec::new(), width, height, palette)
         .expect("Error while creating gif location");
     encoder
         .set_repeat(Repeat::Infinite)
