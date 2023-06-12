@@ -1,7 +1,7 @@
 use std::{fs::File, io::Write, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{logs::CsvLogger, run_python, Array2d, Energies, System};
+use phases::{logs::CsvLogger, run_python, Array2d, Energies, StreamingVariance, System};
 use rayon::prelude::*;
 
 // model parameters
@@ -9,9 +9,9 @@ type Atom = phases::NumAtom<2>;
 type Concentration = phases::NumC<2>;
 const WIDTH: usize = 32;
 const HEIGHT: usize = 64;
-const STEPS: usize = WIDTH * HEIGHT * 40_000;
-const FIRST_STEPS: usize = WIDTH * HEIGHT * 40_000;
-const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 100_000;
+const STEPS: usize = WIDTH * HEIGHT * 4000;
+const FIRST_STEPS: usize = WIDTH * HEIGHT * 4000;
+const EQUILIBRIUM_STEPS: usize = WIDTH * HEIGHT * 10_000;
 
 const ENERGIES: [f32; 4] = [-1.0, -0.75, -0.75, -1.0];
 
@@ -80,28 +80,18 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             system.move_vacancy(beta);
         }
 
-        let mut int_energies: Vec<f64> = Vec::with_capacity(STEPS);
+        let mut stats = StreamingVariance::new();
         for _ in 0..STEPS {
             system.move_vacancy(beta);
-            int_energies.push(system.internal_energy() as f64)
+            stats.add_value(system.internal_energy())
         }
-
-        // doing it like this because of numerics
-        let avg_energy = int_energies.iter().sum::<f64>() / int_energies.len() as f64;
-        let variance = int_energies
-            .iter()
-            .map(|e| (*e - avg_energy).powi(2))
-            .sum::<f64>()
-            / int_energies.len() as f64;
-        let avg_energy = avg_energy / (WIDTH * HEIGHT) as f64;
-        let variance = variance / (WIDTH * HEIGHT * WIDTH * HEIGHT) as f64;
 
         logger
             .send_row(vec![
                 concentration.get_cs()[0] as f32,
                 temp,
-                avg_energy as f32,
-                variance as f32 / temp / temp,
+                stats.avg() / (WIDTH * HEIGHT) as f32,
+                stats.variance() / (temp * temp) / (WIDTH * HEIGHT) as f32,
             ])
             .unwrap();
 

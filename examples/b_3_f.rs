@@ -1,7 +1,7 @@
 use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{logs::CsvLogger, run_python, Array3d, Energies, System};
+use phases::{logs::CsvLogger, run_python, Array3d, Energies, StreamingVariance, System};
 use rayon::prelude::*;
 
 // model parameters
@@ -78,28 +78,18 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             system.move_vacancy(beta);
         }
 
-        let mut int_energies: Vec<f32> = Vec::with_capacity(STEPS);
+        let mut stats = StreamingVariance::new();
         for _ in 0..STEPS {
             system.move_vacancy(beta);
-            int_energies.push(system.internal_energy())
+            stats.add_value(system.internal_energy())
         }
-
-        // doing it like this because of numerics
-        let avg_energy: f32 = int_energies.iter().sum::<f32>() / int_energies.len() as f32;
-        let variance = int_energies
-            .iter()
-            .map(|e| (*e - avg_energy).powi(2))
-            .sum::<f32>()
-            / int_energies.len() as f32;
-        let avg_energy = avg_energy / (WIDTH * HEIGHT * DEPTH) as f32;
-        let variance = variance / (WIDTH * HEIGHT * DEPTH) as f32 / (WIDTH * HEIGHT * DEPTH) as f32;
 
         logger
             .send_row(vec![
                 concentration.get_cs()[0] as f32,
                 temp,
-                avg_energy,
-                variance / temp / temp,
+                stats.avg() / (WIDTH * HEIGHT * DEPTH) as f32,
+                stats.variance() / (temp * temp) / (WIDTH * HEIGHT * DEPTH) as f32,
             ])
             .unwrap();
 
