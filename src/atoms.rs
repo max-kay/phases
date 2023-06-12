@@ -11,6 +11,7 @@ pub struct NumAtom<const N: usize>(u8);
 
 impl<const N: usize> Mark for NumAtom<N> {
     /// This constant is for the check if the first bit is allways unoccupied
+    // TODO rethink with vacancy value
     const OK: usize = 128 - N;
     /// # Safety
     /// the implementation of this function plays with bits and thus does not garantee
@@ -50,6 +51,21 @@ impl<const N: usize> ATrait for NumAtom<N> {
         let distr = WeightedIndex::new(&cs.cs).unwrap();
         Self(distr.sample(rng) as u8)
     }
+
+    fn vacancy() -> Self {
+        // TODO better implementation
+        let mut used_bits = 0b0000_0000;
+        for i in 0..N as u8 {
+            used_bits |= i;
+            used_bits |= i << 1;
+        }
+        let mut vacant_value =0b0000_0001;
+
+        while vacant_value&used_bits!=0{
+            vacant_value <<= 1
+        };
+        Self(vacant_value)
+    }
 }
 
 impl<const N: usize> NumAtom<N> {
@@ -85,7 +101,10 @@ pub trait Energies<A: ATrait> {
 
 impl Energies<NumAtom<2>> for [f32; 4] {
     fn get_interaction_energy(&self, a_1: NumAtom<2>, a_2: NumAtom<2>) -> f32 {
-        unsafe { *self.get_unchecked(((*a_1 << 1) + *a_2) as usize) }
+        // Safety this is save as with the last & the index is ensured to be < 4
+        // this is also correct with the vacancy value of 0b0000_0100 but it depends on the
+        // concrete implementation of the move vacancy method
+        unsafe { *self.get_unchecked((((*a_1 << 1) + *a_2) & 0b0000_0011) as usize) }
     }
 
     fn as_dict(&self) -> String {

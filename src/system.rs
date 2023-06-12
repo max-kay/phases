@@ -157,6 +157,7 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
             // The value in the grid where the atom sits leads to an over counting
             // of the energy between index 1 and 2
             // but this doesnt matter because it is in e_0 and e_1 and thus subtrackted out
+            // !!SEE COMMENT ON Energies IMPLEMENTATION FOR [f32; 4]
             let e_0 = self.energies_around(*other_idx);
             self.lattice.swap_idxs(idx, *other_idx);
             let e_1 = self.energies_around(idx);
@@ -171,7 +172,9 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
                 false
             }
         } else {
-            self.vacancy = Some(self.lattice.random_idx(&mut self.rng));
+            let idx = self.lattice.random_idx(&mut self.rng);
+            self.vacancy = Some(idx);
+            self.lattice[idx] = L::Atom::vacancy();
             self.move_vacancy(beta)
         }
     }
@@ -179,7 +182,6 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
 
 impl<L: GifFrame, E: Energies<L::Atom>> System<L, E> {
     pub fn get_frame(&self) -> gif::Frame<'_> {
-        // the existance of vacancies is purposely ignored
         self.lattice.get_frame()
     }
 }

@@ -111,6 +111,7 @@ where
 
 pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
     type Concentration: Copy;
+    fn vacancy() -> Self;
     fn uniform(rng: &mut MyRng) -> Self;
     fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
 }
