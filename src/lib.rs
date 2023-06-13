@@ -260,7 +260,7 @@ impl StreamingVariance {
         self.m_k_1 = self.m_k;
         self.v_k_1 = self.v_k;
         self.m_k = self.m_k_1 + (x_k - self.m_k_1) / self.count as f32;
-        self.v_k = self.v_k_1 - (x_k - self.m_k_1) * (x_k - self.m_k);
+        self.v_k = self.v_k_1 + (x_k - self.m_k_1) * (x_k - self.m_k);
     }
 
     pub fn avg(&self) -> f32 {
