@@ -44,6 +44,10 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     pub fn tot_sites(&self) -> usize {
         self.lattice.tot_sites()
     }
+
+    pub fn get_energies_dict(&self) -> String {
+        self.bond_energies.as_dict()
+    }
 }
 
 /// everything energies
