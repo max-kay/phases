@@ -6,7 +6,7 @@ use std::{
 use itertools::Itertools;
 use rand::Rng;
 
-use crate::{ATrait, GifFrame, Lattice, MyRng, NumAtom};
+use crate::{BinAtom, GifFrame, Lattice, MyRng, RandAtom};
 
 /// A 2D grid type that is Copy and allows indexes to "wrap around"
 #[derive(Clone)]
@@ -64,7 +64,7 @@ impl<T: Default + Copy, const W: usize, const H: usize> Default for Array2d<T, W
     }
 }
 
-impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W, H> {
+impl<T: Copy + RandAtom, const W: usize, const H: usize> Lattice for Array2d<T, W, H> {
     type Atom = T;
     type Index = (isize, isize);
     type Neighbors = [Self::Index; 4];
@@ -164,7 +164,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize> Lattice for Array2d<T, W,
     }
 }
 
-impl<const W: usize, const H: usize, const N: usize> GifFrame for Array2d<NumAtom<N>, W, H> {
+impl<const W: usize, const H: usize> GifFrame for Array2d<BinAtom, W, H> {
     fn get_frame(&self) -> gif::Frame<'_> {
         // SAFETY: This is safe because NumAtom<N> is repr(transparent) and only contains an u8
         gif::Frame::from_indexed_pixels(

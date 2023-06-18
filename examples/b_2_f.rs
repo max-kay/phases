@@ -1,12 +1,13 @@
 use std::{fs::File, io::Write, sync::atomic::AtomicU64};
 
 use chrono::Utc;
-use phases::{logs::CsvLogger, run_python, Array2d, Energies, StreamingVariance, System};
+use phases::{
+    logs::CsvLogger, run_python, Array2d, BinAtom as Atom, BinConcentration as Concentration,
+    Energies, StreamingVariance, System,
+};
 use rayon::prelude::*;
 
 // model parameters
-type Atom = phases::NumAtom<2>;
-type Concentration = phases::NumC<2>;
 const WIDTH: usize = 32;
 const HEIGHT: usize = 64;
 const STEPS: usize = WIDTH * HEIGHT * 4000;
@@ -53,7 +54,7 @@ fn main() {
         .par_iter()
         .map_with(logger, |logger, c_a| {
             run_model_with_concentration(
-                Concentration::new([*c_a, 1.0 - c_a]),
+                Concentration::new(*c_a, 1.0 - c_a),
                 temps.clone(),
                 logger.clone(),
             )
@@ -88,7 +89,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
 
         logger
             .send_row(vec![
-                concentration.get_cs()[0] as f32,
+                concentration.get_c_a() as f32,
                 temp,
                 stats.avg() / (WIDTH * HEIGHT) as f32,
                 stats.variance() / (temp * temp) / (WIDTH * HEIGHT) as f32,

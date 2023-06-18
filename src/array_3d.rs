@@ -6,7 +6,7 @@ use std::{
 use itertools::Itertools;
 use rand::Rng;
 
-use crate::{ATrait, GifFrame, Lattice, MyRng, NumAtom};
+use crate::{BinAtom, GifFrame, Lattice, MyRng, RandAtom};
 
 /// A 3D grid type that is Copy and allows indexes to "wrap around"
 #[derive(Clone)]
@@ -74,7 +74,7 @@ impl<T: Default + Copy, const W: usize, const H: usize, const D: usize> Default
     }
 }
 
-impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
+impl<T: Copy + RandAtom, const W: usize, const H: usize, const D: usize> Lattice
     for Array3d<T, W, H, D>
 {
     type Atom = T;
@@ -194,9 +194,7 @@ impl<T: Copy + ATrait, const W: usize, const H: usize, const D: usize> Lattice
     }
 }
 
-impl<const W: usize, const H: usize, const D: usize, const N: usize> GifFrame
-    for Array3d<NumAtom<N>, W, H, D>
-{
+impl<const W: usize, const H: usize, const D: usize> GifFrame for Array3d<BinAtom, W, H, D> {
     fn get_frame(&self) -> gif::Frame<'_> {
         let ptr = self.grid.as_ptr().cast();
         gif::Frame::from_indexed_pixels(

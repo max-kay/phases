@@ -1,8 +1,6 @@
-// #![feature(slice_flatten)]
 use std::{
     collections::HashMap,
-    hash::Hash,
-    ops::{Deref, Index, IndexMut},
+    ops::{Index, IndexMut},
     process::Command,
 };
 
@@ -15,12 +13,10 @@ mod array_3d;
 pub use array_3d::Array3d;
 
 mod atoms;
-pub use atoms::{Energies, NumAtom, NumC};
+pub use atoms::{BinAtom, BinConcentration, Energies, Mark, RandAtom};
 
 mod system;
 pub use system::System;
-
-// mod macros;
 
 pub mod anim;
 pub mod logs;
@@ -28,7 +24,7 @@ pub mod logs;
 type MyRng = Pcg64;
 
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
-    type Atom: Copy + ATrait;
+    type Atom: Copy + RandAtom;
     type Index: Copy;
     type Neighbors: AsRef<[Self::Index]>;
 
@@ -109,28 +105,6 @@ where
 {
 }
 
-pub trait ATrait: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
-    type Concentration: Copy;
-    fn vacancy() -> Self;
-    fn uniform(rng: &mut MyRng) -> Self;
-    fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
-}
-
-pub trait Mark: ATrait {
-    /// This constant is for the check if the first bit is allways unoccupied
-    const OK: usize;
-    /// # Safety
-    /// this function is allowed to manipulate bits of the underlying data
-    /// this has to be undone by using the `.unmark()` function
-    unsafe fn mark(&mut self);
-    fn unmark(&mut self);
-    fn is_marked(&self) -> bool;
-}
-
-// pub trait CTrait {
-//     // fn uniform() -> Self;
-// }
-
 pub struct RegionStats {
     min: u32,
     quart_1: u32,
@@ -189,7 +163,7 @@ impl RegionStats {
         out
     }
 
-    pub fn gen_stats<T: ATrait>(map: HashMap<T, HashMap<u32, u32>>) -> HashMap<T, Self> {
+    pub fn gen_stats<T: RandAtom>(map: HashMap<T, HashMap<u32, u32>>) -> HashMap<T, Self> {
         let mut out = HashMap::new();
         for (atom, map) in map {
             out.insert(atom, Self::from_map(map));

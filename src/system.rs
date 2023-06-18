@@ -4,7 +4,7 @@ use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ATrait, Energies, GifFrame, Lattice, Mark, MyRng, RegionCounter, RegionStats};
+use crate::{Energies, GifFrame, Lattice, Mark, MyRng, RandAtom, RegionCounter, RegionStats};
 
 pub struct System<L: Lattice, E: Energies<L::Atom>> {
     bond_energies: E,
@@ -19,7 +19,7 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
     pub fn new(
         bond_energies: E,
         seed: Option<&str>,
-        concentration: <L::Atom as ATrait>::Concentration,
+        concentration: <L::Atom as RandAtom>::Concentration,
     ) -> Self {
         let mut rng = match seed {
             Some(seed) => Seeder::from(seed).make_rng(),
@@ -27,7 +27,7 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
         };
 
         let grid = L::fill_with_fn(&mut |_| {
-            <L::Atom as ATrait>::with_concentration(&mut rng, concentration)
+            <L::Atom as RandAtom>::with_concentration(&mut rng, concentration)
         });
 
         let mut obj = Self {

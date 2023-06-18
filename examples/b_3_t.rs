@@ -3,12 +3,12 @@ use std::{fs::File, io::Write};
 use chrono::Utc;
 
 use phases::{
-    anim::{prepare_file_encoder, self}, logs::CsvLogger, run_python, Array3d, Energies, RegionStats, System,
+    anim::{self, prepare_file_encoder},
+    logs::CsvLogger,
+    run_python, Array3d, BinAtom as Atom, BinConcentration as Concentration, Energies, RegionStats,
+    System,
 };
-
 // model parameters
-type Atom = phases::NumAtom<2>;
-type Concentration = phases::NumC<2>;
 const WIDTH: usize = 64;
 const HEIGHT: usize = 64;
 const DEPTH: usize = 64;
@@ -33,7 +33,7 @@ const LOG_ENTRIES: usize = 1000;
 fn main() {
     let start = std::time::Instant::now();
 
-    let concentration = Concentration::new([1.0, 1.0]);
+    let concentration = Concentration::new(1.0, 1.0);
 
     let name = format!("b_3_t_{}", Utc::now().format("%Y-%m-%d_%H-%M"));
     make_system_file(&name, concentration).unwrap();
@@ -54,7 +54,7 @@ fn main() {
         WIDTH as u16,
         HEIGHT as u16,
         Some((LENGTH / FRAMES) as u16),
-        anim::PALETTE
+        anim::PALETTE,
     );
 
     let mut system = System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(
@@ -94,7 +94,7 @@ fn main() {
         WIDTH as u16,
         HEIGHT as u16,
         None,
-        anim::PALETTE
+        anim::PALETTE,
     );
     encoder
         .write_frame(&system.get_frame())
@@ -119,6 +119,6 @@ fn make_system_file(
     writeln!(file, "Steps per Lattice Site")?;
     writeln!(file, "{}", STEPS as f32 / (WIDTH * HEIGHT * DEPTH) as f32)?;
     writeln!(file, "Concentration")?;
-    writeln!(file, "{:?}", concentration.get_cs())?;
+    writeln!(file, "{:?}", concentration.get_c_a())?;
     Ok(())
 }

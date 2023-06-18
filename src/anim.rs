@@ -12,7 +12,7 @@ pub fn prepare_file_encoder(
     width: u16,
     height: u16,
     hundredths_per_frame: Option<u16>,
-    palette: &[u8]
+    palette: &[u8],
 ) -> gif::Encoder<File> {
     let file = File::create(path).expect("Error while creating file!");
     let mut encoder =
@@ -37,7 +37,7 @@ pub fn prepare_vec_encoder(
     width: u16,
     height: u16,
     hundredths_per_frame: Option<u16>,
-    palette: &[u8]
+    palette: &[u8],
 ) -> gif::Encoder<Vec<u8>> {
     let mut encoder = gif::Encoder::new(Vec::new(), width, height, palette)
         .expect("Error while creating gif location");
