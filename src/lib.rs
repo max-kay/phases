@@ -22,7 +22,7 @@ pub mod anim;
 pub mod logs;
 
 type MyRng = Pcg64;
-type ClusterDistribution = HashMap<u32, u32>;
+pub type ClusterDistribution = HashMap<u32, u32>;
 
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + RandAtom;
