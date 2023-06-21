@@ -6,6 +6,7 @@ pub trait RandAtom: Default + Eq + PartialEq + Hash + Deref<Target = u8> {
     type Concentration: Copy;
     fn vacancy() -> Self;
     fn with_concentration(rng: &mut MyRng, cs: Self::Concentration) -> Self;
+    fn all_atoms() -> Vec<Self>;
 }
 pub trait Mark: RandAtom {
     /// # Safety
@@ -59,6 +60,9 @@ impl RandAtom for BinAtom {
         } else {
             Self(0b0001)
         }
+    }
+    fn all_atoms() -> Vec<Self> {
+        vec![Self(0), Self(1)]
     }
 }
 

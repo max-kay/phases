@@ -22,6 +22,7 @@ pub mod anim;
 pub mod logs;
 
 type MyRng = Pcg64;
+type ClusterDistribution = HashMap<u32, u32>;
 
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + RandAtom;
@@ -57,19 +58,17 @@ pub trait GifFrame: Lattice {
     fn get_frame(&self) -> gif::Frame<'_>;
 }
 
-pub trait RegionCounter: Lattice
+pub trait ClusterCounter: Lattice
 where
     <Self as Lattice>::Atom: Mark,
 {
-    fn count_regions(&mut self) -> HashMap<Self::Atom, HashMap<u32, u32>> {
+    fn count_clusters(&mut self, atom: Self::Atom) -> ClusterDistribution {
         let mut map = HashMap::new();
         for idx in self.all_idxs() {
-            if !self[idx].is_marked() {
-                *map.entry(self[idx])
-                    .or_insert(HashMap::new())
-                    // SAFETY:
-                    // this is safe because we unmark all item in the for_each afterwards
-                    .entry(unsafe { self.mark_region_and_get_size(idx) })
+            if !self[idx].is_marked() && self[idx] == atom {
+                // SAFETY:
+                // this is safe because we unmark all item in the for_each afterwards
+                *map.entry(unsafe { self.mark_region_and_get_size(idx) })
                     .or_insert(0) += 1;
             }
         }
@@ -98,14 +97,14 @@ where
     }
 }
 
-impl<T> RegionCounter for T
+impl<T> ClusterCounter for T
 where
     T: Lattice,
     <T as Lattice>::Atom: Mark,
 {
 }
 
-pub struct RegionStats {
+pub struct ClusterStats {
     min: u32,
     quart_1: u32,
     median: u32,
@@ -113,8 +112,8 @@ pub struct RegionStats {
     max: u32,
 }
 
-impl RegionStats {
-    pub fn from_map(map: HashMap<u32, u32>) -> Self {
+impl ClusterStats {
+    pub fn from_map(map: ClusterDistribution) -> Self {
         let tot_blocks = map
             .iter()
             .fold(0, |acc_count, (_, count)| acc_count + count);
@@ -163,14 +162,6 @@ impl RegionStats {
         out
     }
 
-    pub fn gen_stats<T: RandAtom>(map: HashMap<T, HashMap<u32, u32>>) -> HashMap<T, Self> {
-        let mut out = HashMap::new();
-        for (atom, map) in map {
-            out.insert(atom, Self::from_map(map));
-        }
-        out
-    }
-
     pub fn as_vec_f32(&self) -> Vec<f32> {
         vec![
             self.min as f32,
@@ -209,7 +200,7 @@ pub fn flatten<T, const N: usize, const M: usize>(arr: &[[T; N]; M]) -> &[T] {
     unsafe { std::slice::from_raw_parts(arr.as_ptr().cast(), N * M) }
 }
 
-pub struct StreamingVariance {
+pub struct StreamingStats {
     count: u32,
     m_k: f32,
     m_k_1: f32,
@@ -217,7 +208,7 @@ pub struct StreamingVariance {
     v_k_1: f32,
 }
 
-impl StreamingVariance {
+impl StreamingStats {
     // variance after https://math.stackexchange.com/questions/20593/calculate-variance-from-a-stream-of-sample-values
     pub fn new() -> Self {
         Self {

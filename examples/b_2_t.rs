@@ -4,8 +4,8 @@ use chrono::Utc;
 use phases::{
     anim::{self, prepare_file_encoder},
     logs::CsvLogger,
-    run_python, Array2d, BinAtom as Atom, BinConcentration as Concentration, Energies, RegionStats,
-    System,
+    run_python, Array2d, BinAtom as Atom, BinConcentration as Concentration, ClusterStats,
+    Energies, System,
 };
 // model parameters
 const WIDTH: usize = 64;
@@ -39,8 +39,8 @@ fn main() {
     let path = format!("out/logs/{}.csv", name);
 
     let mut categories = vec!["step".to_owned(), "temp".to_owned(), "energy".to_owned()];
-    categories.append(&mut RegionStats::get_categories(Some("atom 0 ")));
-    categories.append(&mut RegionStats::get_categories(Some("atom 2 ")));
+    categories.append(&mut ClusterStats::get_categories(Some("atom 0 ")));
+    categories.append(&mut ClusterStats::get_categories(Some("atom 2 ")));
 
     let (logger, handle) = CsvLogger::new(
         path,
@@ -67,9 +67,9 @@ fn main() {
                 temp(i),
                 system.internal_energy() / (WIDTH * HEIGHT) as f32,
             ];
-            let stats = system.get_region_stats();
-            values.append(&mut stats[&Atom::new(0)].as_vec_f32());
-            values.append(&mut stats[&Atom::new(1)].as_vec_f32());
+            for distr in system.count_clusters() {
+                values.append(&mut ClusterStats::from_map(distr).as_vec_f32());
+            }
             logger.send_row(values).expect("error while sending row");
         }
         if i % (STEPS / FRAMES) == 0 {

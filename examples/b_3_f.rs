@@ -3,7 +3,7 @@ use std::{fs::File, io::Write, mem::drop, sync::atomic::AtomicU64};
 use chrono::Utc;
 use phases::{
     logs::CsvLogger, run_python, Array3d, BinAtom as Atom, BinConcentration as Concentration,
-    Energies, StreamingVariance, System,
+    Energies, StreamingStats, System,
 };
 use rayon::prelude::*;
 // model parameters
@@ -78,7 +78,7 @@ fn run_model_with_concentration(concentration: Concentration, temps: Vec<f32>, l
             system.move_vacancy(beta);
         }
 
-        let mut stats = StreamingVariance::new();
+        let mut stats = StreamingStats::new();
         for _ in 0..STEPS {
             system.move_vacancy(beta);
             stats.add_value(system.internal_energy())

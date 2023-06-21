@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{Energies, GifFrame, Lattice, Mark, MyRng, RandAtom, RegionCounter, RegionStats};
+use crate::{ClusterCounter, Energies, GifFrame, Lattice, Mark, MyRng, RandAtom, ClusterDistribution};
 
 pub struct System<L: Lattice, E: Energies<L::Atom>> {
     bond_energies: E,
@@ -190,11 +188,15 @@ impl<L: GifFrame, E: Energies<L::Atom>> System<L, E> {
     }
 }
 
-impl<L: RegionCounter, E: Energies<L::Atom>> System<L, E>
+impl<L: ClusterCounter, E: Energies<L::Atom>> System<L, E>
 where
     <L as Lattice>::Atom: Mark,
 {
-    pub fn get_region_stats(&mut self) -> HashMap<<L as Lattice>::Atom, RegionStats> {
-        RegionStats::gen_stats(self.lattice.count_regions())
+    pub fn count_clusters(&mut self) -> Vec<ClusterDistribution> {
+        let mut out = Vec::new();
+        for atom in L::Atom::all_atoms() {
+            out.push(self.lattice.count_clusters(atom))
+        }
+        out
     }
 }
