@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{hash_map::Entry, HashMap},
     ops::{Index, IndexMut},
     process::Command,
 };
@@ -22,7 +22,6 @@ pub mod anim;
 pub mod logs;
 
 type MyRng = Pcg64;
-pub type ClusterDistribution = HashMap<u32, u32>;
 
 pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Index> {
     type Atom: Copy + RandAtom;
@@ -58,6 +57,28 @@ pub trait GifFrame: Lattice {
     fn get_frame(&self) -> gif::Frame<'_>;
 }
 
+pub struct ClusterDistribution(HashMap<u32, u32>);
+
+impl ClusterDistribution {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn from_map(map: HashMap<u32, u32>) -> Self {
+        Self(map)
+    }
+
+    pub fn combine(&mut self, other: &Self) {
+        for (key, val) in other.0.iter() {
+            let original_value = match self.0.entry(*key) {
+                Entry::Occupied(entry) => entry.into_mut(),
+                Entry::Vacant(entry) => entry.insert(0),
+            };
+            *original_value += *val
+        }
+    }
+}
+
 pub trait ClusterCounter: Lattice
 where
     <Self as Lattice>::Atom: Mark,
@@ -75,7 +96,7 @@ where
         self.as_flat_slice_mut()
             .iter_mut()
             .for_each(|atom| atom.unmark());
-        map
+        ClusterDistribution(map)
     }
 
     /// # Safety
@@ -115,9 +136,10 @@ pub struct ClusterStats {
 impl ClusterStats {
     pub fn from_map(map: ClusterDistribution) -> Self {
         let tot_blocks = map
+            .0
             .iter()
             .fold(0, |acc_count, (_, count)| acc_count + count);
-        let mut vec: Vec<(u32, u32)> = map.into_iter().collect();
+        let mut vec: Vec<(u32, u32)> = map.0.into_iter().collect();
         vec.sort_by_key(|(size, _count)| *size);
         let mut count_i = 0;
         let mut quart_1 = 0;
