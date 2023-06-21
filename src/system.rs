@@ -2,7 +2,9 @@ use rand::{seq::SliceRandom, Rng, SeedableRng};
 use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
-use crate::{ClusterCounter, Energies, GifFrame, Lattice, Mark, MyRng, RandAtom, ClusterDistribution};
+use crate::{
+    ClusterCounter, ClusterDistribution, Energies, GifFrame, Lattice, Mark, MyRng, RandAtom,
+};
 
 pub struct System<L: Lattice, E: Energies<L::Atom>> {
     bond_energies: E,
@@ -192,11 +194,14 @@ impl<L: ClusterCounter, E: Energies<L::Atom>> System<L, E>
 where
     <L as Lattice>::Atom: Mark,
 {
-    pub fn count_clusters(&mut self) -> Vec<ClusterDistribution> {
+    pub fn count_all_clusters(&mut self) -> Vec<ClusterDistribution> {
         let mut out = Vec::new();
         for atom in L::Atom::all_atoms() {
             out.push(self.lattice.count_clusters(atom))
         }
         out
+    }
+    pub fn count_cluster(&mut self, atom: L::Atom) -> ClusterDistribution {
+        self.lattice.count_clusters(atom)
     }
 }
