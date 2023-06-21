@@ -201,7 +201,7 @@ where
         }
         out
     }
-    pub fn count_cluster(&mut self, atom: L::Atom) -> ClusterDistribution {
+    pub fn count_clusters(&mut self, atom: L::Atom) -> ClusterDistribution {
         self.lattice.count_clusters(atom)
     }
 }
