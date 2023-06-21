@@ -68,6 +68,10 @@ impl ClusterDistribution {
         Self(map)
     }
 
+    pub fn as_map(&self) -> &HashMap<u32, u32> {
+        &self.0
+    }
+
     pub fn combine(&mut self, other: &Self) {
         for (key, val) in other.0.iter() {
             let original_value = match self.0.entry(*key) {
