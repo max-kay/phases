@@ -1,16 +1,17 @@
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{btree_map::Entry, BTreeMap, HashMap},
     ops::{Index, IndexMut},
     process::Command,
 };
 
-use rand::distributions::Distribution;
 use rand_pcg::Pcg64;
 
 mod array_2d;
 pub use array_2d::Array2d;
 mod array_3d;
 pub use array_3d::Array3d;
+mod fast_array;
+pub use fast_array::FastArray;
 
 mod atoms;
 pub use atoms::{BinAtom, BinConcentration, Energies, Mark, RandAtom};
@@ -44,32 +45,41 @@ pub trait Lattice: Index<Self::Index, Output = Self::Atom> + IndexMut<Self::Inde
     fn choose_idxs_uniformly(&self, rng: &mut MyRng) -> (Self::Index, Self::Index) {
         (self.random_idx(rng), self.random_idx(rng))
     }
-    fn choose_idxs_with_distribution(
-        &self,
-        rng: &mut MyRng,
-        distr: impl Distribution<Self::Index>,
-    ) -> (Self::Index, Self::Index);
+    // fn choose_idxs_with_distribution(
+    //     &self,
+    //     rng: &mut MyRng,
+    //     distr: impl Distribution<Self::Index>,
+    // ) -> (Self::Index, Self::Index);
     fn reduce_index(&self, idx: Self::Index) -> Self::Index;
-    fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index);
+    fn swap_vals(&mut self, idx_1: Self::Index, idx_2: Self::Index) {
+        let temp = self[idx_1];
+        self[idx_1] = self[idx_2];
+        self[idx_2] = temp;
+    }
 }
 
 pub trait GifFrame: Lattice {
     fn get_frame(&self) -> gif::Frame<'_>;
 }
 
-pub struct ClusterDistribution(HashMap<u32, u32>);
+// Todo why BTreeMap?
+pub struct ClusterDistribution(BTreeMap<u32, u32>);
 
 impl ClusterDistribution {
     pub fn new() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 
-    pub fn from_map(map: HashMap<u32, u32>) -> Self {
+    pub fn from_map(map: BTreeMap<u32, u32>) -> Self {
         Self(map)
     }
 
-    pub fn as_map(&self) -> &HashMap<u32, u32> {
+    pub fn ref_map(&self) -> &BTreeMap<u32, u32> {
         &self.0
+    }
+
+    pub fn as_map(self) -> BTreeMap<u32, u32> {
+        self.0
     }
 
     pub fn combine(&mut self, other: &Self) {
@@ -87,8 +97,21 @@ pub trait ClusterCounter: Lattice
 where
     <Self as Lattice>::Atom: Mark,
 {
+    fn count_clusters(&mut self, atom: Self::Atom) -> ClusterDistribution;
+
+    /// # Safety
+    /// this function uses mark() of the underlying atom type
+    /// which has to be undone using .unmark()
+    unsafe fn mark_region_and_get_size(&mut self, idx: Self::Index) -> u32;
+}
+
+impl<T> ClusterCounter for T
+where
+    T: Lattice,
+    <T as Lattice>::Atom: Mark,
+{
     fn count_clusters(&mut self, atom: Self::Atom) -> ClusterDistribution {
-        let mut map = HashMap::new();
+        let mut map = BTreeMap::new();
         for idx in self.all_idxs() {
             if !self[idx].is_marked() && self[idx] == atom {
                 // SAFETY:
@@ -120,13 +143,6 @@ where
         }
         count
     }
-}
-
-impl<T> ClusterCounter for T
-where
-    T: Lattice,
-    <T as Lattice>::Atom: Mark,
-{
 }
 
 pub struct ClusterStats {
@@ -180,9 +196,9 @@ impl ClusterStats {
         ];
         if let Some(prefix) = prefix {
             out.iter_mut().for_each(|string| {
-                let mut baba = prefix.to_string();
-                baba.push_str(string);
-                *string = baba;
+                let mut temp = prefix.to_string();
+                temp.push_str(string);
+                *string = temp;
             })
         }
         out

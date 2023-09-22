@@ -4,13 +4,13 @@ use chrono::Utc;
 use phases::{
     anim::{self, prepare_file_encoder},
     logs::CsvLogger,
-    run_python, Array2d, BinAtom as Atom, BinConcentration as Concentration, ClusterStats,
-    Energies, System,
+    run_python, BinAtom as Atom, BinConcentration as Concentration, ClusterStats, Energies,
+    FastArray, System,
 };
 // model parameters
-const WIDTH: usize = 64;
-const HEIGHT: usize = 32;
-const STEPS: usize = WIDTH * HEIGHT * 400_000;
+const SIDE: usize = 256;
+const POW: usize = 8;
+const STEPS: usize = SIDE * SIDE * 40_000;
 const ENERGIES: [f32; 4] = [-1.0, -0.75, -0.75, -1.0];
 
 // temperature
@@ -50,22 +50,22 @@ fn main() {
 
     let mut encoder = prepare_file_encoder(
         format!("out/gifs/{}.gif", name),
-        WIDTH as u16,
-        HEIGHT as u16,
+        SIDE as u16,
+        SIDE as u16,
         Some((LENGTH / FRAMES) as u16),
         anim::PALETTE,
     );
 
     let mut system =
-        System::<Array2d<Atom, WIDTH, HEIGHT>, _>::new(ENERGIES, Some("my_seed"), concentration);
+        System::<FastArray<Atom, SIDE, POW>, _>::new(ENERGIES, Some("my_seed"), concentration);
 
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
         if i % (STEPS / LOG_ENTRIES) == 0 {
             let mut values = vec![
-                i as f32 / (WIDTH * HEIGHT) as f32,
+                i as f32 / (SIDE * SIDE) as f32,
                 temp(i),
-                system.internal_energy() / (WIDTH * HEIGHT) as f32,
+                system.internal_energy() / (SIDE * SIDE) as f32,
             ];
             for distr in system.count_all_clusters() {
                 values.append(&mut ClusterStats::from_map(distr).as_vec_f32());
@@ -87,8 +87,8 @@ fn main() {
 
     let mut encoder = prepare_file_encoder(
         format!("out/gifs/{}_last.gif", name),
-        WIDTH as u16,
-        HEIGHT as u16,
+        SIDE as u16,
+        SIDE as u16,
         None,
         anim::PALETTE,
     );
@@ -111,9 +111,9 @@ fn make_system_file(
     writeln!(file, "Energies")?;
     writeln!(file, "{energies_dict}")?;
     writeln!(file, "Width, Height")?;
-    writeln!(file, "{WIDTH}, {HEIGHT}")?;
+    writeln!(file, "{SIDE}, {SIDE}")?;
     writeln!(file, "Steps per Lattice Site")?;
-    writeln!(file, "{}", STEPS as f32 / (WIDTH * HEIGHT) as f32)?;
+    writeln!(file, "{}", STEPS as f32 / (SIDE * SIDE) as f32)?;
     writeln!(file, "Concentration")?;
     writeln!(file, "{:?}", concentration.get_c_a())?;
     Ok(())

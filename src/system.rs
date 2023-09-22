@@ -1,5 +1,4 @@
 use rand::{seq::SliceRandom, Rng, SeedableRng};
-use rand_distr::Distribution;
 use rand_seeder::Seeder;
 
 use crate::{
@@ -107,41 +106,14 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
             }
         };
         let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.lattice.swap_idxs(idx_1, idx_2);
+        self.lattice.swap_vals(idx_1, idx_2);
         let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
         let delta_e = e_1 - e_0;
         if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
             self.update_energy(delta_e);
             true
         } else {
-            self.lattice.swap_idxs(idx_1, idx_2);
-            false
-        }
-    }
-
-    /// This function performs a monte carlo swap with the boltzman factor beta = 1/(k_B * T)
-    /// using a distribution for the distance between the two lattice sites
-    pub fn monte_carlo_swap_distr<T>(&mut self, distr: T, beta: f32) -> bool
-    where
-        T: Distribution<L::Index> + Copy,
-    {
-        let (idx_1, idx_2) = loop {
-            let (idx_1, idx_2) = self
-                .lattice
-                .choose_idxs_with_distribution(&mut self.rng, distr);
-            if self.lattice[idx_1] != self.lattice[idx_2] {
-                break (idx_1, idx_2);
-            }
-        };
-        let e_0 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        self.lattice.swap_idxs(idx_1, idx_2);
-        let e_1 = self.energies_around(idx_1) + self.energies_around(idx_2);
-        let delta_e = e_1 - e_0;
-        if delta_e <= 0.0 || (self.rng.gen::<f32>() < (-beta * delta_e).exp()) {
-            self.update_energy(delta_e);
-            true
-        } else {
-            self.lattice.swap_idxs(idx_1, idx_2);
+            self.lattice.swap_vals(idx_1, idx_2);
             false
         }
     }
@@ -163,7 +135,7 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
             // but this doesnt matter because it is in e_0 and e_1 and thus subtrackted out
             // !!SEE COMMENT ON Energies IMPLEMENTATION FOR [f32; 4]
             let e_0 = self.energies_around(*other_idx);
-            self.lattice.swap_idxs(idx, *other_idx);
+            self.lattice.swap_vals(idx, *other_idx);
             let e_1 = self.energies_around(idx);
 
             let delta_e = e_1 - e_0;
@@ -172,7 +144,7 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
                 self.vacancy = Some(*other_idx);
                 true
             } else {
-                self.lattice.swap_idxs(idx, *other_idx);
+                self.lattice.swap_vals(idx, *other_idx);
                 false
             }
         } else {

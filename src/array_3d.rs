@@ -139,18 +139,14 @@ impl<T: Copy + RandAtom, const W: usize, const H: usize, const D: usize> Lattice
     }
 
     fn as_flat_slice(&self) -> &[Self::Atom] {
-        // TODO this has to be doable better
-        if std::mem::size_of::<Self::Atom>() == 0 {
-            panic!()
-        }
+        // Safety: the memory layout of [[T; N]; N] is the same as [T]
+        // TODO zero sized types
         unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H * D) }
     }
 
     fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom] {
-        // TODO this has to be doable better
-        if std::mem::size_of::<Self::Atom>() == 0 {
-            panic!()
-        }
+        // Safety: the memory layout of [[T; N]; N] is the same as [T]
+        // TODO zero sized types
         unsafe { std::slice::from_raw_parts_mut(self.grid.as_mut_ptr().cast(), W * H * D) }
     }
 
@@ -162,31 +158,12 @@ impl<T: Copy + RandAtom, const W: usize, const H: usize, const D: usize> Lattice
         )
     }
 
-    fn choose_idxs_with_distribution(
-        &self,
-        rng: &mut crate::MyRng,
-        distr: impl rand_distr::Distribution<Self::Index>,
-    ) -> (Self::Index, Self::Index) {
-        let idx_1 = self.random_idx(rng);
-        let offset = distr.sample(rng);
-        (
-            idx_1,
-            (idx_1.0 + offset.0, idx_1.1 + offset.1, idx_1.2 + offset.2),
-        )
-    }
-
     fn reduce_index(&self, idx: Self::Index) -> Self::Index {
         let (x, y, z) = idx;
         let x = x.rem_euclid(W as isize);
         let y = y.rem_euclid(H as isize);
         let z = z.rem_euclid(D as isize);
         (x, y, z)
-    }
-
-    fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index) {
-        let temp = self[idx_1];
-        self[idx_1] = self[idx_2];
-        self[idx_2] = temp;
     }
 
     fn tot_sites(&self) -> usize {
@@ -200,6 +177,7 @@ impl<const W: usize, const H: usize, const D: usize> GifFrame for Array3d<BinAto
         gif::Frame::from_indexed_pixels(
             W as u16,
             H as u16,
+            // Safety: the memory layout of [[T; N]; N] is the same as [T]
             unsafe { std::slice::from_raw_parts(ptr, W * H) },
             None,
         )

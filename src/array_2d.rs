@@ -117,33 +117,19 @@ impl<T: Copy + RandAtom, const W: usize, const H: usize> Lattice for Array2d<T, 
     }
 
     fn as_flat_slice(&self) -> &[Self::Atom] {
-        // TODO this has to be doable better
-        if std::mem::size_of::<Self::Atom>() == 0 {
-            panic!()
-        }
+        // Safety: the memory layout of [[T; N]; N] is the same as [T]
+        // TODO Zero sized types
         unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H) }
     }
 
     fn as_flat_slice_mut(&mut self) -> &mut [Self::Atom] {
-        // TODO this has to be doable better
-        if std::mem::size_of::<Self::Atom>() == 0 {
-            panic!()
-        }
+        // Safety: the memory layout of [[T; N]; N] is the same as [T]
+        // TODO Zero sized types
         unsafe { std::slice::from_raw_parts_mut(self.grid.as_mut_ptr().cast(), W * H) }
     }
 
     fn random_idx(&self, rng: &mut MyRng) -> Self::Index {
         (rng.gen_range(0..W as isize), rng.gen_range(0..H as isize))
-    }
-
-    fn choose_idxs_with_distribution(
-        &self,
-        rng: &mut crate::MyRng,
-        distr: impl rand_distr::Distribution<Self::Index>,
-    ) -> (Self::Index, Self::Index) {
-        let idx_1 = self.random_idx(rng);
-        let offset = distr.sample(rng);
-        (idx_1, (idx_1.0 + offset.0, idx_1.1 + offset.1))
     }
 
     fn reduce_index(&self, idx: Self::Index) -> Self::Index {
@@ -153,12 +139,6 @@ impl<T: Copy + RandAtom, const W: usize, const H: usize> Lattice for Array2d<T, 
         (x, y)
     }
 
-    fn swap_idxs(&mut self, idx_1: Self::Index, idx_2: Self::Index) {
-        let temp = self[idx_1];
-        self[idx_1] = self[idx_2];
-        self[idx_2] = temp;
-    }
-
     fn tot_sites(&self) -> usize {
         W * H
     }
@@ -166,10 +146,10 @@ impl<T: Copy + RandAtom, const W: usize, const H: usize> Lattice for Array2d<T, 
 
 impl<const W: usize, const H: usize> GifFrame for Array2d<BinAtom, W, H> {
     fn get_frame(&self) -> gif::Frame<'_> {
-        // SAFETY: This is safe because NumAtom<N> is repr(transparent) and only contains an u8
         gif::Frame::from_indexed_pixels(
             W as u16,
             H as u16,
+            // Safety: the memory layout of [[T; N]; N] is the same as [T]
             unsafe { std::slice::from_raw_parts(self.grid.as_ptr().cast(), W * H) },
             None,
         )
