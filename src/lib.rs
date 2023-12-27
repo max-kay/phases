@@ -186,14 +186,14 @@ impl ClusterStats {
         }
     }
 
-    pub fn from_map_atom(map: ClusterDistribution) -> Self {
+    pub fn from_map_atom(map: &ClusterDistribution) -> Self {
         let tot_atoms = map
             .0
             .iter()
             .fold(0, |acc_count, (block_size, block_count)| {
                 acc_count + block_count * block_size
             });
-        let mut vec: Vec<(u32, u32)> = map.0.into_iter().collect();
+        let mut vec: Vec<(u32, u32)> = map.0.iter().map(|(a, b)| (*a, *b)).collect();
         vec.sort_by_key(|(size, _count)| *size);
         let mut count_i = 0;
         let mut quart_1 = 0;

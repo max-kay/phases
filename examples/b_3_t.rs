@@ -74,7 +74,7 @@ fn main() {
                 system.internal_energy() / (WIDTH * HEIGHT * DEPTH) as f32,
             ];
             for distr in system.count_all_clusters() {
-                values.append(&mut ClusterStats::from_map_atom(distr).as_vec_f32());
+                values.append(&mut ClusterStats::from_map_atom(&distr).as_vec_f32());
             }
             logger.send_row(values).expect("error while sending row");
         }
