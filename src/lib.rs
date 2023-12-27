@@ -154,12 +154,12 @@ pub struct ClusterStats {
 }
 
 impl ClusterStats {
-    pub fn from_map_block(map: ClusterDistribution) -> Self {
+    pub fn from_map_block(map: &ClusterDistribution) -> Self {
         let tot_blocks = map
             .0
             .iter()
             .fold(0, |acc_count, (_, block_count)| acc_count + block_count);
-        let mut vec: Vec<(u32, u32)> = map.0.into_iter().collect();
+        let mut vec: Vec<(u32, u32)> = map.0.iter().map(|(a, b)| (*a, *b)).collect();
         vec.sort_by_key(|(size, _count)| *size);
         let mut count_i = 0;
         let mut quart_1 = 0;
