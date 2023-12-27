@@ -10,6 +10,8 @@ def get_title(name: str) -> str:
         return "Cooling Curves for a 2D System"
     if "b_3_" in name:
         return "Cooling Curves for a 3D System"
+    else:
+        raise KeyError
 
 
 if len(argv) >= 2:

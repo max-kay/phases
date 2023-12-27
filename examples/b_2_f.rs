@@ -39,16 +39,17 @@ fn main() {
         .map(|i| (i as f64 / (CONCENTRATION_STEPS - 1) as f64) * 0.92 + 0.04)
         .collect();
 
-    let (logger, handle) = CsvLogger::new(
-        format!("out/logs/{}.csv", name),
-        "file generated as log to github maxkay/phases".to_owned(),
-        vec![
-            "c".to_owned(),
-            "temp".to_owned(),
-            "energy".to_owned(),
-            "heat capacity".to_owned(),
-        ],
-    );
+    let (logger, handle) =
+        CsvLogger::new(
+            format!("out/logs/{}.csv", name),
+            "file generated as log to github maxkay/phases".to_owned(),
+            vec![
+                "c".to_owned(),
+                "temp".to_owned(),
+                "energy".to_owned(),
+                "heat capacity".to_owned(),
+            ],
+        );
 
     let _: Vec<_> = concentrations
         .par_iter()

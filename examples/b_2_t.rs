@@ -48,13 +48,14 @@ fn main() {
         categories,
     );
 
-    let mut encoder = prepare_file_encoder(
-        format!("out/gifs/{}.gif", name),
-        SIDE as u16,
-        SIDE as u16,
-        Some((LENGTH / FRAMES) as u16),
-        anim::PALETTE,
-    );
+    let mut encoder =
+        prepare_file_encoder(
+            format!("out/gifs/{}.gif", name),
+            SIDE as u16,
+            SIDE as u16,
+            Some((LENGTH / FRAMES) as u16),
+            anim::PALETTE,
+        );
 
     let mut system =
         System::<FastArray<Atom, SIDE, POW>, _>::new(ENERGIES, Some("my_seed"), concentration);
@@ -68,7 +69,7 @@ fn main() {
                 system.internal_energy() / (SIDE * SIDE) as f32,
             ];
             for distr in system.count_all_clusters() {
-                values.append(&mut ClusterStats::from_map(distr).as_vec_f32());
+                values.append(&mut ClusterStats::from_map_atom(distr).as_vec_f32());
             }
             logger.send_row(values).expect("error while sending row");
         }

@@ -49,19 +49,21 @@ fn main() {
         categories,
     );
 
-    let mut encoder = prepare_file_encoder(
-        format!("out/gifs/{}.gif", name),
-        WIDTH as u16,
-        HEIGHT as u16,
-        Some((LENGTH / FRAMES) as u16),
-        anim::PALETTE,
-    );
+    let mut encoder =
+        prepare_file_encoder(
+            format!("out/gifs/{}.gif", name),
+            WIDTH as u16,
+            HEIGHT as u16,
+            Some((LENGTH / FRAMES) as u16),
+            anim::PALETTE,
+        );
 
-    let mut system = System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(
-        ENERGIES,
-        Some("my_seed"),
-        concentration,
-    );
+    let mut system =
+        System::<Array3d<Atom, WIDTH, HEIGHT, DEPTH>, _>::new(
+            ENERGIES,
+            Some("my_seed"),
+            concentration,
+        );
 
     for i in 0..STEPS {
         system.move_vacancy(1.0 / temp(i));
@@ -72,7 +74,7 @@ fn main() {
                 system.internal_energy() / (WIDTH * HEIGHT * DEPTH) as f32,
             ];
             for distr in system.count_all_clusters() {
-                values.append(&mut ClusterStats::from_map(distr).as_vec_f32());
+                values.append(&mut ClusterStats::from_map_atom(distr).as_vec_f32());
             }
             logger.send_row(values).expect("error while sending row");
         }

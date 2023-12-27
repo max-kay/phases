@@ -154,11 +154,11 @@ pub struct ClusterStats {
 }
 
 impl ClusterStats {
-    pub fn from_map(map: ClusterDistribution) -> Self {
+    pub fn from_map_block(map: ClusterDistribution) -> Self {
         let tot_blocks = map
             .0
             .iter()
-            .fold(0, |acc_count, (_, count)| acc_count + count);
+            .fold(0, |acc_count, (_, block_count)| acc_count + block_count);
         let mut vec: Vec<(u32, u32)> = map.0.into_iter().collect();
         vec.sort_by_key(|(size, _count)| *size);
         let mut count_i = 0;
@@ -182,18 +182,53 @@ impl ClusterStats {
             quart_1,
             median,
             quart_3,
-            max: vec.pop().unwrap().0,
+            max: vec.pop().expect("should not be empty").0,
+        }
+    }
+
+    pub fn from_map_atom(map: ClusterDistribution) -> Self {
+        let tot_atoms = map
+            .0
+            .iter()
+            .fold(0, |acc_count, (block_size, block_count)| {
+                acc_count + block_count * block_size
+            });
+        let mut vec: Vec<(u32, u32)> = map.0.into_iter().collect();
+        vec.sort_by_key(|(size, _count)| *size);
+        let mut count_i = 0;
+        let mut quart_1 = 0;
+        let mut median = 0;
+        let mut quart_3 = 0;
+        for (size, count) in &vec {
+            count_i += count * size;
+            if count_i <= tot_atoms / 4 {
+                quart_1 = *size
+            } else if count_i <= tot_atoms / 2 {
+                median = *size
+            } else if count_i <= 3 * tot_atoms / 4 {
+                quart_3 = *size
+            } else {
+                break;
+            }
+        }
+        Self {
+            min: vec[0].0,
+            quart_1,
+            median,
+            quart_3,
+            max: vec.pop().expect("should not be empty").0,
         }
     }
 
     pub fn get_categories(prefix: Option<impl ToString>) -> Vec<String> {
-        let mut out = vec![
-            "min".to_owned(),
-            "quart_1".to_owned(),
-            "median".to_owned(),
-            "quart_3".to_owned(),
-            "max".to_owned(),
-        ];
+        let mut out =
+            vec![
+                "min".to_owned(),
+                "quart_1".to_owned(),
+                "median".to_owned(),
+                "quart_3".to_owned(),
+                "max".to_owned(),
+            ];
         if let Some(prefix) = prefix {
             out.iter_mut().for_each(|string| {
                 let mut temp = prefix.to_string();
@@ -213,6 +248,16 @@ impl ClusterStats {
             self.max as f32,
         ]
     }
+}
+
+pub fn disentangle(cluster_stats: Vec<ClusterStats>) -> [Vec<u32>; 5] {
+    [
+        cluster_stats.iter().map(|stats| stats.min).collect(),
+        cluster_stats.iter().map(|stats| stats.quart_1).collect(),
+        cluster_stats.iter().map(|stats| stats.median).collect(),
+        cluster_stats.iter().map(|stats| stats.quart_3).collect(),
+        cluster_stats.iter().map(|stats| stats.max).collect(),
+    ]
 }
 
 pub fn run_python(script: &str, arg: &str) {

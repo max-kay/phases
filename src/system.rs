@@ -20,14 +20,15 @@ impl<L: Lattice, E: Energies<L::Atom>> System<L, E> {
         seed: Option<&str>,
         concentration: <L::Atom as RandAtom>::Concentration,
     ) -> Self {
-        let mut rng = match seed {
-            Some(seed) => Seeder::from(seed).make_rng(),
-            None => MyRng::from_entropy(),
-        };
+        let mut rng =
+            match seed {
+                Some(seed) => Seeder::from(seed).make_rng(),
+                None => MyRng::from_entropy(),
+            };
 
-        let grid = L::fill_with_fn(&mut |_| {
-            <L::Atom as RandAtom>::with_concentration(&mut rng, concentration)
-        });
+        let grid = L::fill_with_fn(
+            &mut |_| <L::Atom as RandAtom>::with_concentration(&mut rng, concentration)
+        );
 
         let mut obj = Self {
             bond_energies,
