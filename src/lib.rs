@@ -145,6 +145,7 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ClusterStats {
     min: u32,
     quart_1: u32,
@@ -196,18 +197,21 @@ impl ClusterStats {
         let mut vec: Vec<(u32, u32)> = map.0.iter().map(|(a, b)| (*a, *b)).collect();
         vec.sort_by_key(|(size, _count)| *size);
         let mut count_i = 0;
-        let mut quart_1 = 0;
-        let mut median = 0;
-        let mut quart_3 = 0;
+        let mut quart_1 = vec[0].0;
+        let mut median = vec[0].0;
+        let mut quart_3 = vec[0].0;
         for (size, count) in &vec {
             count_i += count * size;
             if count_i <= tot_atoms / 4 {
                 quart_1 = *size
-            } else if count_i <= tot_atoms / 2 {
+            }
+            if count_i <= tot_atoms / 2 {
                 median = *size
-            } else if count_i <= 3 * tot_atoms / 4 {
+            }
+            if count_i <= 3 * tot_atoms / 4 {
                 quart_3 = *size
-            } else {
+            }
+            if count_i > 3 * tot_atoms / 4 {
                 break;
             }
         }
@@ -247,6 +251,13 @@ impl ClusterStats {
             self.quart_3 as f32,
             self.max as f32,
         ]
+    }
+
+    pub fn valid(&self) -> bool {
+        self.min <= self.quart_1
+            && self.quart_1 <= self.median
+            && self.median <= self.quart_3
+            && self.quart_3 <= self.max
     }
 }
 

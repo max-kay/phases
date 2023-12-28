@@ -69,7 +69,11 @@ fn main() {
                 system.internal_energy() / (SIDE * SIDE) as f32,
             ];
             for distr in system.count_all_clusters() {
-                values.append(&mut ClusterStats::from_map_atom(&distr).as_vec_f32());
+                let c_stats = ClusterStats::from_map_atom(&distr);
+                if !c_stats.valid() {
+                    println!("{:?}", c_stats);
+                }
+                values.append(&mut c_stats.as_vec_f32());
             }
             logger.send_row(values).expect("error while sending row");
         }
