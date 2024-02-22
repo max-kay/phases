@@ -300,10 +300,10 @@ pub fn flatten<T, const N: usize, const M: usize>(arr: &[[T; N]; M]) -> &[T] {
 
 pub struct StreamingStats {
     count: u32,
-    m_k: f32,
-    m_k_1: f32,
-    v_k: f32,
-    v_k_1: f32,
+    m_k: f64,
+    m_k_1: f64,
+    v_k: f64,
+    v_k_1: f64,
 }
 
 impl StreamingStats {
@@ -317,20 +317,21 @@ impl StreamingStats {
             v_k_1: 0.0,
         }
     }
-
+    // _1 is old
     pub fn add_value(&mut self, x_k: f32) {
+        let x_k = x_k as f64;
         self.count += 1;
         self.m_k_1 = self.m_k;
         self.v_k_1 = self.v_k;
-        self.m_k = self.m_k_1 + (x_k - self.m_k_1) / self.count as f32;
+        self.m_k = self.m_k_1 + (x_k - self.m_k_1) / self.count as f64;
         self.v_k = self.v_k_1 + (x_k - self.m_k_1) * (x_k - self.m_k);
     }
 
     pub fn avg(&self) -> f32 {
-        self.m_k
+        self.m_k as f32
     }
 
     pub fn variance(&self) -> f32 {
-        self.v_k / self.count as f32
+        (self.v_k / self.count as f64) as f32
     }
 }
